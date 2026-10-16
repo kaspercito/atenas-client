@@ -1,0 +1,57 @@
+package com.atenas.client.cosmetics;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.entity.AbstractClientPlayer;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.entity.RenderPlayer;
+import net.minecraft.client.renderer.entity.layers.LayerRenderer;
+import net.minecraft.util.MathHelper;
+
+public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
+    private final RenderPlayer renderer;
+
+    public CapeLayer(RenderPlayer renderer) { this.renderer = renderer; }
+
+    @Override
+    public void doRenderLayer(AbstractClientPlayer p, float limbSwing, float limbSwingAmount, float pt,
+                              float age, float headYaw, float headPitch, float scale) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (p.isInvisible()) return;
+        Cosmetics.Item item = Cosmetics.of(p, Cosmetics.Type.CAPE);
+        if (item == null) return;
+
+        mc.getTextureManager().bindTexture(item.texture);
+        GlStateManager.color(1f, 1f, 1f, 1f);
+        GlStateManager.pushMatrix();
+        // un poco mas atras que la capa normal, para tapar la de Mojang si existe
+        GlStateManager.translate(0f, 0f, 0.14f);
+
+        double dx = p.prevChasingPosX + (p.chasingPosX - p.prevChasingPosX) * (double) pt
+                - (p.prevPosX + (p.posX - p.prevPosX) * (double) pt);
+        double dy = p.prevChasingPosY + (p.chasingPosY - p.prevChasingPosY) * (double) pt
+                - (p.prevPosY + (p.posY - p.prevPosY) * (double) pt);
+        double dz = p.prevChasingPosZ + (p.chasingPosZ - p.prevChasingPosZ) * (double) pt
+                - (p.prevPosZ + (p.posZ - p.prevPosZ) * (double) pt);
+        float yawOff = p.prevRenderYawOffset + (p.renderYawOffset - p.prevRenderYawOffset) * pt;
+        double sin = (double) MathHelper.sin(yawOff * (float) Math.PI / 180f);
+        double cos = (double) (-MathHelper.cos(yawOff * (float) Math.PI / 180f));
+        float lift = MathHelper.clamp_float((float) dy * 10f, -6f, 32f);
+        float swing = (float) (dx * sin + dz * cos) * 100f;
+        float sway = (float) (dx * cos - dz * sin) * 100f;
+        if (swing < 0f) swing = 0f;
+        float cam = p.prevCameraYaw + (p.cameraYaw - p.prevCameraYaw) * pt;
+        lift += MathHelper.sin((p.prevDistanceWalkedModified
+                + (p.distanceWalkedModified - p.prevDistanceWalkedModified) * pt) * 6f) * 32f * cam;
+        if (p.isSneaking()) lift += 25f;
+
+        GlStateManager.rotate(6f + swing / 2f + lift, 1f, 0f, 0f);
+        GlStateManager.rotate(sway / 2f, 0f, 0f, 1f);
+        GlStateManager.rotate(-sway / 2f, 0f, 1f, 0f);
+        GlStateManager.rotate(180f, 0f, 1f, 0f);
+        renderer.getMainModel().renderCape(0.0625f);
+        GlStateManager.popMatrix();
+    }
+
+    @Override
+    public boolean shouldCombineTextures() { return false; }
+}

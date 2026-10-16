@@ -1,0 +1,14 @@
+[
+  {
+    "modid": "atenasclient",
+    "name": "Atenas Client",
+    "description": "Cliente PvP para Minecraft 1.8.9: HUD, mods de PvP y utilidades, cosmeticos y menu propio.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "authorList": ["Atenas"],
+    "credits": "",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]

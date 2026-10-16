@@ -1,0 +1,7 @@
+name = "atenas-cosmetics"
+main = "index.js"
+compatibility_date = "2024-09-01"
+
+[[kv_namespaces]]
+binding = "COSMETICS"
+id = "PEGA_AQUI_EL_ID_DEL_KV"

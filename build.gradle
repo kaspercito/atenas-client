@@ -1,0 +1,79 @@
+buildscript {
+    repositories {
+        jcenter()
+        maven { name = "forge"; url = "https://maven.minecraftforge.net/" }
+        maven { name = "forge-legacy"; url = "http://files.minecraftforge.net/maven" }
+        maven { name = "sponge"; url = "https://repo.spongepowered.org/maven" }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT'
+        classpath 'org.spongepowered:mixingradle:0.6-SNAPSHOT'
+    }
+}
+apply plugin: 'net.minecraftforge.gradle.forge'
+apply plugin: 'org.spongepowered.mixin'
+
+version = project.hasProperty("modVersion") ? project.modVersion : "1.5.0"
+group = "com.atenas.client"
+archivesBaseName = "AtenasClient"
+
+sourceCompatibility = targetCompatibility = '1.8'
+compileJava.options.encoding = 'UTF-8'
+
+repositories {
+    maven { name = "sponge"; url = "https://repo.spongepowered.org/maven" }
+}
+
+// "shade" = librerias que se meten DENTRO del jar del mod (Mixin tiene que ir dentro: Forge 1.8.9 no lo trae).
+configurations {
+    shade
+    compile.extendsFrom shade
+}
+
+dependencies {
+    shade('org.spongepowered:mixin:0.7.11-SNAPSHOT') {
+        exclude module: 'launchwrapper'
+        exclude module: 'guava'
+        exclude module: 'gson'
+        exclude module: 'commons-io'
+    }
+}
+
+minecraft {
+    version = "1.8.9-11.15.1.2318-1.8.9"
+    runDir = "run"
+    mappings = "stable_22"
+    // Para probar con "gradlew runClient": carga Mixin y la config de mixins.
+    clientRunArgs += ["--tweakClass", "org.spongepowered.asm.launch.MixinTweaker", "--mixin", "mixins.atenasclient.json"]
+}
+
+// MixinGradle genera el refmap (traduce los nombres de MCP a los de produccion).
+sourceSets {
+    main {
+        ext.refMap = "mixins.atenasclient.refmap.json"
+    }
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+        expand 'version': project.version, 'mcversion': project.minecraft.version
+    }
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
+
+jar {
+    from { configurations.shade.collect { it.isDirectory() ? it : zipTree(it) } }
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    manifest.attributes(
+        'TweakClass': 'org.spongepowered.asm.launch.MixinTweaker',
+        'TweakOrder': 0,
+        'MixinConfigs': 'mixins.atenasclient.json',
+        'ForceLoadAsMod': true,
+        'ModSide': 'CLIENT'
+    )
+}
