@@ -5,7 +5,6 @@ import java.util.Map;
 
 import org.lwjgl.input.Keyboard;
 
-import com.atenas.client.gui.AtenasButton;
 import com.atenas.client.gui.Theme;
 
 import net.minecraft.client.Minecraft;
@@ -20,10 +19,9 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.InputEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 
-/** Atajo Shift+Tab, boton en el menu de pausa, sincronizacion periodica y avisos (toasts) en pantalla. */
+/** Atajo Shift+Tab, sincronizacion periodica y avisos (toasts) en pantalla. */
 public class SocialEvents {
 
-    private static final int PAUSE_BUTTON_ID = 7331;
     private int tick;
 
     // ------------------------------------------------------------ avisos (ver Toasts)
@@ -119,19 +117,7 @@ public class SocialEvents {
         Toasts.draw();
     }
 
-    @SubscribeEvent
-    public void onPauseInit(GuiScreenEvent.InitGuiEvent.Post e) {
-        if (!(e.gui instanceof GuiIngameMenu)) return;
-        int w = 112;
-        e.buttonList.add(new AtenasButton(PAUSE_BUTTON_ID, 6, 6, w, 20, badgeLabel(com.atenas.client.core.Lang.t("Amigos", "Friends"))));
-    }
-
-    @SubscribeEvent
-    public void onPauseAction(GuiScreenEvent.ActionPerformedEvent.Post e) {
-        if (e.gui instanceof GuiIngameMenu && e.button != null && e.button.id == PAUSE_BUTTON_ID) {
-            Minecraft.getMinecraft().displayGuiScreen(new SocialScreen(e.gui));
-        }
-    }
+    // El menu de pausa ya no lleva boton "Amigos" (se abre con Shift+Tab, tambien dentro de la pausa; ver onGuiKey).
 
     public static String badgeLabel(String base) {
         int n = SocialClient.badge();

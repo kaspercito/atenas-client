@@ -61,10 +61,11 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         float openGround = 0.85f + (float) Math.sin(st.phase * 0.2f) * 0.05f;
         float openAir = 0.50f + (float) Math.sin(st.phase * 0.55f) * 0.32f;
         float open = openGround * (1f - a) + openAir * a;
-        // Con capa: las alas nacen a los lados de la capa (outset) y se abren mas hacia los lados que hacia atras, asi no la tapan.
+        // Con capa: las alas nacen justo detras de la capa (zoff) y casi pegadas al centro (outset): no la tapan ni quedan separadas.
         boolean cape = Cosmetics.of(p, Cosmetics.Type.CAPE) != null;
-        if (cape) open *= 0.72f;
-        mesh.outset = cape ? 5.5f : 0f;
+        if (cape) open *= 0.80f;
+        mesh.outset = cape ? 1.2f : 0f; // casi pegadas a la columna: nacen detras de la capa, no separadas
+        mesh.zoff = cape ? 2.0f : 0f;
         if (p.isSneaking()) open = cape ? 0.9f : 1.15f;
         float flap = 0.025f + 0.075f * a; // siempre ondulan un poco; mas en el aire
 

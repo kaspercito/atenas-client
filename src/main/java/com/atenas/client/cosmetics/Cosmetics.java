@@ -71,15 +71,28 @@ public final class Cosmetics {
 
     static {
         // Capas
-        add(Type.CAPE, "atenas", "Atenas (Exclusiva)", 0xFFF5C542);
+        addAnim(Type.CAPE, "atenas", "Atenas (Exclusiva)", 0xFFF5C542, 12);
         add(Type.CAPE, "atardecer", "Atardecer Lunar", 0xFFFF7A59);
-        add(Type.CAPE, "aurora", "Aurora", 0xFF35E0A8);
+        addAnim(Type.CAPE, "aurora", "Aurora", 0xFF35E0A8, 12);
         add(Type.CAPE, "sakura", "Sakura", 0xFFF8A9C8);
         add(Type.CAPE, "oceano", "Oc\u00e9ano al Atardecer", 0xFF1E7FD8);
         add(Type.CAPE, "bosque", "Bosque Brumoso", 0xFF4F8F72);
-        add(Type.CAPE, "galaxia", "Galaxia", 0xFF7B4DFF);
-        add(Type.CAPE, "lava", "Monta\u00f1a de Lava", 0xFFFF6A1A);
+        addAnim(Type.CAPE, "galaxia", "Galaxia", 0xFF7B4DFF, 12);
+        addAnim(Type.CAPE, "lava", "Monta\u00f1a de Lava", 0xFFFF6A1A, 12);
         add(Type.CAPE, "hielo", "Cristal de Hielo", 0xFF7FD6FF);
+        addAnim(Type.CAPE, "llamas", "Llamas", 0xFFFF7A1A, 12);
+        addAnim(Type.CAPE, "matrix", "Matrix", 0xFF1BFF5A, 12);
+        addAnim(Type.CAPE, "pulso", "Pulso Synthwave", 0xFFFF2DA6, 12);
+        addAnim(Type.CAPE, "arcoiris", "Arco\u00edris", 0xFF9B7BFF, 12);
+        addAnim(Type.CAPE, "mareas", "Mareas", 0xFF2E6FC4, 12);
+        addAnim(Type.CAPE, "eclipse", "Eclipse Solar", 0xFFFFB84D, 12);
+        addAnim(Type.CAPE, "tormenta", "Tormenta", 0xFF5B7CFA, 12);
+        addAnim(Type.CAPE, "nieve", "Ventisca", 0xFFBFE3FF, 12);
+        addAnim(Type.CAPE, "luciernagas", "Luci\u00e9rnagas", 0xFFB8FF4A, 12);
+        addAnim(Type.CAPE, "oroliquido", "Oro L\u00edquido", 0xFFFFC83D, 12);
+        addAnim(Type.CAPE, "cristal", "Cristal Prisma", 0xFF8FE9FF, 12);
+        addAnim(Type.CAPE, "portal", "Portal M\u00edstico", 0xFFB04DFF, 12);
+        addAnim(Type.CAPE, "dragon", "Drag\u00f3n", 0xFFD6202A, 12);
 
         add(Type.WINGS, "doradas", "Alas Doradas", 0xFFF5C542);
         add(Type.WINGS, "oscuras", "Alas Oscuras", 0xFF8E2DE2);

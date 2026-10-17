@@ -45,6 +45,8 @@ public class CosmeticSync {
     private static long lastFetch, lastPush, lastSelf;
     private static String lastNames = "";
     private int tick;
+    /** Maximo de nombres por peticion /cosmetics/get (el servicio no contesta mas de 40). */
+    private static final int MAX_NAMES = 40;
 
     public static boolean available() { return enabled; }
 
@@ -106,7 +108,7 @@ public class CosmeticSync {
         }
 
         // 2) bajar lo TUYO (la primera vez y cada 30 s): asi un cambio hecho en 1.20.1 aparece aqui
-        if (!dirty && !PUSH_BUSY.get() && now - lastSelf > (selfKnown ? 30000L : 5000L) && SELF_BUSY.compareAndSet(false, true)) {
+        if (!dirty && !PUSH_BUSY.get() && now - lastSelf > (selfKnown ? 15000L : 5000L) && SELF_BUSY.compareAndSet(false, true)) {
             lastSelf = now;
             final int seen = rev;
             run("Atenas-CosmeticSelf", new Runnable() {
@@ -146,24 +148,30 @@ public class CosmeticSync {
 
         // 3) bajar los de los jugadores cercanos
         if (mc.theWorld == null || mc.thePlayer == null || mc.isSingleplayer()) return;
-        List<String> names = new ArrayList<String>();
+        // Los cercanos van primero (son los que se dibujan) y el servicio contesta como mucho 40 nombres por peticion:
+        // antes se mandaban hasta 80 ordenados por alfabeto y los ultimos (z...) nunca recibian sus cosmeticos.
+        List<String> near = new ArrayList<String>();
         for (EntityPlayer p : mc.theWorld.playerEntities) {
             String n = p.getName();
-            if (n != null && !n.equalsIgnoreCase(self) && SocialClient.validName(n)) names.add(n.toLowerCase(Locale.ROOT));
+            if (n != null && !n.equalsIgnoreCase(self) && SocialClient.validName(n)) near.add(n.toLowerCase(Locale.ROOT));
         }
+        List<String> far = new ArrayList<String>();
         if (mc.getNetHandler() != null) { // tambien los de la lista TAB, para poner el logo aunque esten lejos
             for (net.minecraft.client.network.NetworkPlayerInfo info : mc.getNetHandler().getPlayerInfoMap()) {
                 String n = info.getGameProfile().getName();
                 String low = n == null ? null : n.toLowerCase(Locale.ROOT);
-                if (low != null && !low.equalsIgnoreCase(self) && SocialClient.validName(n) && !names.contains(low)) names.add(low);
+                if (low != null && !low.equalsIgnoreCase(self) && SocialClient.validName(n) && !near.contains(low) && !far.contains(low)) far.add(low);
             }
         }
+        Collections.sort(near);
+        Collections.sort(far);
+        List<String> names = new ArrayList<String>(near);
+        names.addAll(far);
         if (names.isEmpty()) return;
-        Collections.sort(names);
-        if (names.size() > 80) names = names.subList(0, 80);
+        if (names.size() > MAX_NAMES) names = new ArrayList<String>(names.subList(0, MAX_NAMES));
         final List<String> wanted = new ArrayList<String>(names);
         final String joined = wanted.toString();
-        if ((joined.equals(lastNames) && now - lastFetch < 20000L) || !FETCH_BUSY.compareAndSet(false, true)) return;
+        if ((joined.equals(lastNames) && now - lastFetch < 15000L) || !FETCH_BUSY.compareAndSet(false, true)) return;
         lastNames = joined;
         lastFetch = now;
         run("Atenas-CosmeticFetch", new Runnable() {

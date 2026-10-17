@@ -24,9 +24,9 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
         mc.getTextureManager().bindTexture(item.texture);
         GlStateManager.color(1f, 1f, 1f, 1f);
         GlStateManager.pushMatrix();
-        // un poco mas atras que la capa normal, para tapar la de Mojang si existe. Con alas puestas va por FUERA de sus raices
-        // (mas lejos del cuerpo) y las alas nacen a los lados de la capa (ver WingsLayer): asi la capa se sigue viendo.
-        GlStateManager.translate(0f, 0f, Cosmetics.of(p, Cosmetics.Type.WINGS) != null ? 0.29f : 0.14f);
+        // Pegada a la espalda (la de Mojang va a 0.125; esta a 0.135 para taparla sin separarse del cuerpo). Con alas puestas NO se
+        // aleja: las alas son las que nacen detras de la capa (ver WingsLayer / WingMesh.zoff).
+        GlStateManager.translate(0f, 0f, 0.135f);
 
         double dx = p.prevChasingPosX + (p.chasingPosX - p.prevChasingPosX) * (double) pt
                 - (p.prevPosX + (p.posX - p.prevPosX) * (double) pt);

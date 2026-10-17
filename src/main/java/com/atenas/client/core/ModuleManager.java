@@ -74,6 +74,7 @@ public final class ModuleManager {
         add(new FullbrightModule(), Module.Category.UTIL);
         add(new TimeModule(), Module.Category.UTIL);
         add(new BadgeModule(), Module.Category.UTIL);
+        add(new ButtonsModule(), Module.Category.UTIL);
     }
 
     private static void add(Module m, Module.Category category) {

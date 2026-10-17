@@ -46,6 +46,8 @@ public final class WingMesh {
     /** Separacion extra (en pixeles del modelo) de la raiz de cada ala respecto al centro de la espalda. Con capa puesta sirve
      *  para que las alas nazcan a los lados de la capa y no encima de ella. Lo fija WingsLayer antes de cada dibujo. */
     public float outset;
+    /** Separacion extra hacia atras (pixeles) de la raiz de las alas. Con capa puesta las alas nacen DETRAS de la capa (la capa queda pegada al cuerpo). */
+    public float zoff;
 
     // memoria de trabajo (el dibujo ocurre siempre en el hilo de render)
     private final float[] px = new float[MAX_SEGS + 1], py = new float[MAX_SEGS + 1], pz = new float[MAX_SEGS + 1];
@@ -135,6 +137,6 @@ public final class WingMesh {
         // giro de apertura alrededor del eje vertical, en el marco "hacia afuera"
         float Xr = X * co - Z * so;
         float Zr = X * so + Z * co;
-        s.vertex(sx * (PIVOT_X + outset + Xr) * unit, (PIVOT_Y - Y) * unit, (PIVOT_Z + Zr) * unit, u, vv);
+        s.vertex(sx * (PIVOT_X + outset + Xr) * unit, (PIVOT_Y - Y) * unit, (PIVOT_Z + zoff + Zr) * unit, u, vv);
     }
 }
