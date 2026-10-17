@@ -92,8 +92,8 @@ public final class Lang {
         p("Animaciones 1.7", "1.7 Animations");
         p("Todas las animaciones 1.7 juntas: balanceo al bloquear con la espada, comer/beber y usar el arco, y golpear bloques mientras usas el objeto.",
           "All the 1.7 animations together: swing while blocking with the sword, eating/drinking and using the bow, and hitting blocks while using an item.");
-        p("Más FPS: gráficos rápidos, sin nubes ni sombras y menos partículas. Devuelve tus ajustes al apagarlo. (Si usas OptiFine, él manda y este mod no hace nada.)",
-          "More FPS: fast graphics, no clouds or shadows and fewer particles. Restores your settings when turned off. (If you use OptiFine, it takes over and this mod does nothing.)");
+        p("Más FPS en granjas y zonas con muchos mobs: no dibuja los mobs que están lejos (los jugadores siempre se ven). Los gráficos los maneja OptiFine.",
+          "More FPS in farms and mob-heavy areas: mobs far away are not drawn (players are always shown). Graphics are handled by OptiFine.");
         p("Perspective", "Perspective");
         p("Mantén la tecla (Alt izquierdo por defecto) para mirar alrededor de tu personaje sin girarlo. Al soltarla vuelve tu vista de antes.",
           "Hold the key (Left Alt by default) to look around your character without turning it. Releasing it restores your previous view.");

@@ -11,6 +11,9 @@
     "MixinGuiIngame",
     "MixinGuiPlayerTabOverlay",
     "MixinGuiButton",
+    "MixinGuiOptionSlider",
+    "MixinGuiLockIconButton",
+    "MixinGuiOverlayDebug",
     "MixinEntityRenderer",
     "MixinItemRenderer",
     "MixinMinecraft"

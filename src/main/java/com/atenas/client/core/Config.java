@@ -76,7 +76,7 @@ public final class Config {
                 JsonObject c = root.getAsJsonObject("cosmetics");
                 for (Cosmetics.Type t : Cosmetics.Type.values()) {
                     String key = t.name().toLowerCase();
-                    if (c.has(key)) Cosmetics.select(t, Cosmetics.find(t, c.get(key).getAsString()));
+                    if (c.has(key)) Cosmetics.restore(t, c.get(key).getAsString());
                 }
                 if (c.has("animate")) Cosmetics.animate = c.get("animate").getAsBoolean();
             }
@@ -142,7 +142,8 @@ public final class Config {
             JsonObject cos = new JsonObject();
             for (Cosmetics.Type t : Cosmetics.Type.values()) {
                 Cosmetics.Item i = Cosmetics.selected(t);
-                cos.addProperty(t.name().toLowerCase(), i == null ? "none" : i.id);
+                String pend = i == null ? Cosmetics.pendingId(t) : null; // eleccion que aun espera al catalogo: no se pierde
+                cos.addProperty(t.name().toLowerCase(), i != null ? i.id : pend != null ? pend : "none");
             }
             cos.addProperty("animate", Cosmetics.animate);
             root.add("cosmetics", cos);

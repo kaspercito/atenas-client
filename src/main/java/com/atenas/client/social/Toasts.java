@@ -7,10 +7,7 @@ import com.atenas.client.gui.Draw;
 import com.atenas.client.gui.Theme;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.ScaledResolution;
-import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.util.ResourceLocation;
 
 /**
  * Avisos propios de Atenas (solicitudes, mensajes, amigos en linea). Cada aviso trae la cara del jugador, entra deslizandose desde la
@@ -77,14 +74,7 @@ public final class Toasts {
 
             // cara (o la inicial si todavia no llego)
             int fx = x + 7, fy = y + 5, fs = 24;
-            ResourceLocation face = t.face == null ? null : Faces.get(t.face);
-            if (face != null) {
-                mc.getTextureManager().bindTexture(face);
-                GlStateManager.enableBlend();
-                GlStateManager.color(1f, 1f, 1f, alpha);
-                Gui.drawScaledCustomSizeModalRect(fx, fy, 0f, 0f, 40, 40, fs, fs, 40f, 40f);
-                GlStateManager.color(1f, 1f, 1f, 1f);
-            } else if (t.face != null) {
+            if (t.face != null && !Faces.draw(t.face, fx, fy, fs, alpha, false)) {
                 Draw.rect(fx, fy, fs, fs, withAlpha(0x2A2550, alpha));
                 Draw.centered(t.face.substring(0, 1).toUpperCase(java.util.Locale.ROOT), fx + fs / 2, fy + 8, withAlpha(0xA78BFA, alpha));
             }

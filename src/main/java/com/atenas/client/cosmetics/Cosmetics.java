@@ -4,11 +4,15 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 import com.atenas.client.core.Config;
+import com.atenas.client.social.SocialClient;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.AbstractClientPlayer;
@@ -41,22 +45,71 @@ public final class Cosmetics {
         public final String name;
         public final Type type;
         public final int color;
-        public final ResourceLocation texture;
-        public final ResourceLocation icon;
+        /** Textura. Los cosmeticos del catalogo (x_...) usan la del modelo base hasta que termina la descarga. */
+        public ResourceLocation texture;
+        public ResourceLocation icon;
         /** Fotogramas de una capa animada (la textura es una tira vertical de 'frames' imagenes). 1 = capa normal. */
-        public final int frames;
+        public int frames;
+        /** Viene del catalogo del servicio (id "x_...") y no del mod. */
+        public final boolean custom;
+        /** Cosmetico del mod cuya forma reutiliza (solo los del catalogo). */
+        public final String base;
+        public final boolean glow;
+        /** Alas de membrana (se dibujan con {@link MembraneWing} en vez de plumas). */
+        public final boolean membrane;
+        /** Multiplicador de la apertura de las alas (1 = normal). Lo aplica WingsLayer. */
+        public float openMul = 1f;
+        /** Version de la textura que ya esta cargada (los del catalogo); -1 = aun no. */
+        int loadedVer = -1;
+        /** Version que pide el catalogo. */
+        int wantVer;
+        /** Texturas dinamicas ya creadas (para borrar la vieja al cambiar de version). */
+        ResourceLocation dynTex, dynIcon;
+        /** Privado y tu nick no esta en su lista: no aparece en tu menu ni puedes elegirlo. */
+        public boolean locked;
 
         Item(Type type, String id, String name, int color, int frames) {
+            this(type, id, name, color, frames, false, null, false, false);
+        }
+
+        Item(Type type, String id, String name, int color, int frames, boolean custom, String base, boolean glow, boolean membrane) {
             this.frames = frames;
             this.type = type;
             this.id = id;
             this.name = name;
             this.color = color;
+            this.custom = custom;
+            this.base = base == null ? "" : base;
+            this.glow = glow;
+            this.membrane = membrane;
             this.texture = new ResourceLocation("atenasclient",
                     "textures/cosmetics/" + type.folder + "/" + id + ".png");
             this.icon = new ResourceLocation("atenasclient",
                     "textures/cosmetics/icons/" + type.key() + "_" + id + ".png");
         }
+
+        /** Id del modelo que dibuja este cosmetico: el suyo, o el de su base si viene del catalogo. */
+        public String modelId() { return custom && !base.isEmpty() ? base : id; }
+
+        public String key() { return type.key() + ":" + id; }
+    }
+
+    /** Una entrada del catalogo del servicio (/cosmetics/catalog). */
+    public static final class Def {
+        public final Type type;
+        public final String id, name, base, scope;
+        public final int color, frames, ver;
+        public final boolean glow, custom;
+        /** Nicks (minusculas) que pueden usarlo si es privado; null si es global. */
+        public final Set<String> owners;
+
+        public Def(Type type, String id, String name, int color, boolean glow, String base, int frames, String scope, boolean custom, int ver, Set<String> owners) {
+            this.type = type; this.id = id; this.name = name; this.color = color; this.glow = glow;
+            this.base = base == null ? "" : base; this.frames = frames; this.scope = scope; this.custom = custom;
+            this.ver = ver; this.owners = owners;
+        }
+
+        boolean isPrivate() { return "private".equals(scope); }
     }
 
     /** Capas animadas encendidas (se puede apagar desde Cosmeticos; apagadas se ve el primer fotograma, sin coste). */
@@ -107,6 +160,17 @@ public final class Cosmetics {
         add(Type.WINGS, "aurora", "Alas Aurora", 0xFF28E6AA);
         add(Type.WINGS, "lunar", "Alas Lunares", 0xFF7896E6);
         add(Type.WINGS, "demonio", "Alas de Demonio", 0xFFC0182A);
+        // Alas de membrana (otra malla: MembraneWing; textura 128x128 de tools/gen_membrane.py)
+        addMembrane("murcielago", "Alas de Murci\u00e9lago", 0xFF7860A8);
+        addMembrane("vampiro", "Alas de Vampiro", 0xFFAA1E34);
+        addMembrane("dragon", "Alas de Drag\u00f3n", 0xFFFF8C28);
+        addMembrane("abismo", "Alas del Abismo", 0xFF14AABE);
+        addMembrane("fantasma", "Alas Fantasma", 0xFFEBFAFF);
+        addMembrane("jade", "Alas de Jade", 0xFF5AD796);
+        addMembrane("solar", "Alas Solares", 0xFFFFE06E);
+        addMembrane("ceniza", "Alas de Ceniza", 0xFF78767E);
+        addMembrane("cristal", "Alas de Cristal", 0xFFC8F5FF);
+        addMembrane("nebulosa", "Alas Nebulosa", 0xFF9646DC);
         // Sombreros
         add(Type.HAT, "halo", "Halo", 0xFFFFE680);
         add(Type.HAT, "corona", "Corona", 0xFFF5C542);
@@ -124,6 +188,9 @@ public final class Cosmetics {
         add(Type.PET, "gato", "Gato", 0xFFE28E3E);
         add(Type.PET, "gatonegro", "Gato negro", 0xFF24242E);
         add(Type.PET, "zorro", "Zorro", 0xFFE87028);
+        add(Type.PET, "catalina", "Catalina", 0xFFE9A15A);
+        // Catalina es privada: hasta que el catalogo diga que tu nick esta en su lista, no aparece ni se puede elegir.
+        find(Type.PET, "catalina").locked = true;
         SELECTED.put(Type.CAPE, find(Type.CAPE, "atenas"));
     }
 
@@ -135,6 +202,10 @@ public final class Cosmetics {
 
     private static void addAnim(Type t, String id, String name, int color, int frames) {
         ALL.add(new Item(t, id, name, color, frames));
+    }
+
+    private static void addMembrane(String id, String name, int color) {
+        ALL.add(new Item(Type.WINGS, id, name, color, 1, false, null, false, true));
     }
 
     /** True si este jugador es lo bastante cercano como para dibujarle cosmeticos (el tuyo siempre). */
@@ -149,12 +220,57 @@ public final class Cosmetics {
         return (int) ((Minecraft.getSystemTime() / FRAME_MS) % item.frames);
     }
 
+    /** Maniquí de la vista previa del menu (cuando no hay mundo): lleva tu seleccion. Lo fija el menu. */
+    public static volatile AbstractClientPlayer previewPlayer;
+
     public static Item selected(Type t) { return SELECTED.get(t); }
 
     public static void select(Type t, Item i) {
+        if (i != null && i.locked) return; // privado y no es tuyo
+        PENDING.remove(t);
         if (i == null) SELECTED.remove(t); else SELECTED.put(t, i);
         Config.save();
         if (!Config.isLoading()) CosmeticSync.markDirty();
+    }
+
+    // ------------------------------------------------------------------ seleccion pendiente
+
+    /** Lo que elegiste pero todavia no existe aqui (un cosmetico del catalogo que aun no se ha bajado): se aplica cuando llega. */
+    private static final Map<Type, String> PENDING = new EnumMap<Type, String>(Type.class);
+
+    /** Carga una eleccion guardada en la config. Si el cosmetico aun no existe (es del catalogo) queda pendiente en vez de perderse. */
+    public static void restore(Type t, String id) {
+        if (id == null || id.length() == 0 || "none".equals(id)) { select(t, null); return; }
+        Item i = find(t, id);
+        if (i == null) { PENDING.put(t, id); SELECTED.remove(t); return; }
+        select(t, i);
+    }
+
+    /** Id pendiente de este tipo (o null): la config lo conserva para no perder tu eleccion mientras baja el catalogo. */
+    public static String pendingId(Type t) { return PENDING.get(t); }
+
+    /** Mensaje corto para el menu (por ejemplo "no puedes llevar X"). Se apaga solo. */
+    public static volatile String notice = "";
+    public static volatile long noticeUntil;
+
+    static void notice(String msg) { notice = msg; noticeUntil = System.currentTimeMillis() + 8000L; }
+
+    /** El servicio rechazo un cosmetico (privado y tu nick no esta en la lista): se quita de tu seleccion y se avisa. Hilo principal. */
+    public static void denied(Type t, String id) {
+        Item cur = SELECTED.get(t);
+        if (cur != null && cur.id.equals(id)) SELECTED.remove(t);
+        if (id != null && id.equals(PENDING.get(t))) PENDING.remove(t);
+        Item it = find(t, id);
+        if (it != null) it.locked = true;
+        notice("No puedes llevar \"" + (it != null ? it.name : id) + "\": es privado.");
+        Config.save();
+    }
+
+    /** Cosmeticos de un tipo que puedes elegir (los privados ajenos no salen). */
+    public static List<Item> visible(Type t) {
+        List<Item> out = new ArrayList<Item>();
+        for (Item i : ALL) if (i.type == t && !i.locked) out.add(i);
+        return out;
     }
 
     /** Aplica lo que hay en el servicio para TI (otra version del juego lo cambio). No vuelve a subirlo. Devuelve true si cambio algo. */
@@ -162,14 +278,93 @@ public final class Cosmetics {
         if (id == null) return false;
         Item cur = SELECTED.get(t);
         if ("none".equals(id)) {
+            PENDING.remove(t);
             if (cur == null) return false;
             SELECTED.remove(t);
             return true;
         }
         Item next = find(t, id);
-        if (next == null || next == cur) return false;
+        if (next == null) { PENDING.put(t, id); return false; } // aun no tenemos el catalogo: se aplicara cuando llegue
+        if (next.locked || next == cur) return false;
+        PENDING.remove(t);
         SELECTED.put(t, next);
         return true;
+    }
+
+    // ------------------------------------------------------------------ catalogo del servicio
+
+    /** True cuando ya se aplico un catalogo (del disco o del servicio). Antes de eso los cosmeticos privados incorporados siguen ocultos. */
+    private static boolean catalogApplied;
+
+    public static boolean catalogApplied() { return catalogApplied; }
+
+    /**
+     * Aplica el catalogo del servicio. HILO PRINCIPAL.
+     *  - reglas sobre cosmeticos incorporados: privado => solo los nicks de "owners" lo ven y lo eligen;
+     *  - cosmeticos nuevos (id x_...): se crean/actualizan (con la forma de su "base") y se piden sus texturas;
+     *  - los que ya no estan en el catalogo se quitan (y si lo llevabas, se desequipa).
+     * Despues resuelve las elecciones pendientes.
+     */
+    public static void applyCatalog(List<Def> defs) {
+        String me = SocialClient.myName();
+        me = me == null ? "" : me.toLowerCase(Locale.ROOT);
+        Map<String, Def> byKey = new HashMap<String, Def>();
+        for (Def d : defs) byKey.put(d.type.key() + ":" + d.id, d);
+
+        // 1) cosmeticos incorporados: bloqueo segun la regla
+        for (Item i : ALL) {
+            if (i.custom) continue;
+            Def d = byKey.get(i.key());
+            i.locked = d != null && d.isPrivate() && !(d.owners != null && d.owners.contains(me));
+        }
+        // 2) cosmeticos del catalogo: quitar los que ya no estan, crear/actualizar el resto
+        for (Iterator<Item> it = ALL.iterator(); it.hasNext();) {
+            Item i = it.next();
+            if (!i.custom || byKey.containsKey(i.key())) continue;
+            it.remove();
+            if (SELECTED.get(i.type) == i) SELECTED.remove(i.type);
+        }
+        for (Def d : defs) {
+            if (!d.custom) continue;
+            Item base = d.base.length() > 0 ? find(d.type, d.base) : null;
+            Item cur = find(d.type, d.id);
+            boolean membrane = base != null && base.membrane;
+            if (cur == null || cur.glow != d.glow || cur.membrane != membrane || !cur.name.equals(d.name) || cur.color != d.color || !cur.base.equals(d.base)) {
+                Item n = new Item(d.type, d.id, d.name, d.color, d.type == Type.CAPE ? Math.max(1, d.frames) : 1, true, d.base, d.glow, membrane);
+                if (base != null) { n.texture = base.texture; n.icon = base.icon; n.openMul = base.openMul; }
+                if (cur != null) {
+                    ALL.set(ALL.indexOf(cur), n);
+                    if (SELECTED.get(d.type) == cur) SELECTED.put(d.type, n);
+                    n.loadedVer = -1;
+                } else {
+                    ALL.add(n);
+                }
+                cur = n;
+            }
+            cur.frames = d.type == Type.CAPE ? Math.max(1, d.frames) : 1;
+            cur.wantVer = d.ver;
+            cur.locked = d.isPrivate() && !(d.owners != null && d.owners.contains(me));
+            CosmeticAssets.request(cur);
+        }
+        // 3) lo que llevas puesto pero ya no puedes llevar se quita (y se sincroniza)
+        boolean dropped = false;
+        for (Type t : Type.values()) {
+            Item c = SELECTED.get(t);
+            if (c != null && c.locked) { SELECTED.remove(t); dropped = true; notice("No puedes llevar \"" + c.name + "\": es privado."); }
+        }
+        // 4) elecciones pendientes que ya existen
+        boolean resolved = false;
+        for (Iterator<Map.Entry<Type, String>> it = PENDING.entrySet().iterator(); it.hasNext();) {
+            Map.Entry<Type, String> e = it.next();
+            Item f = find(e.getKey(), e.getValue());
+            if (f == null) continue; // sigue sin existir (se queda pendiente)
+            it.remove();
+            if (!f.locked && SELECTED.get(e.getKey()) == null) { SELECTED.put(e.getKey(), f); resolved = true; }
+        }
+        catalogApplied = true;
+        CosmeticSync.touch(); // los demas jugadores se vuelven a resolver con el catalogo nuevo
+        if (dropped) CosmeticSync.markDirty();
+        if (dropped || resolved) Config.save();
     }
 
     /** Lo que lleva puesto otro jugador, ya resuelto (se recalcula solo cuando llegan datos nuevos del servicio). */
@@ -183,7 +378,7 @@ public final class Cosmetics {
 
     /** Cosmetico de un jugador: el tuyo, o el que descargamos del servidor para los demas (con cache: sin buscar ni crear texto cada cuadro). */
     public static Item of(AbstractClientPlayer p, Type t) {
-        if (p == Minecraft.getMinecraft().thePlayer) return selected(t);
+        if (p == Minecraft.getMinecraft().thePlayer || p == previewPlayer) return selected(t);
         if (!CosmeticSync.enabled) return null;
         String n = p.getName();
         if (n == null) return null;

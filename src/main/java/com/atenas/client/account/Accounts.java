@@ -116,6 +116,18 @@ public final class Accounts {
         return out;
     }
 
+    /**
+     * true si la cuenta con la que se juega ahora es SIN CONEXION (no premium). Se sabe porque la sesion es \"legacy\" o porque su
+     * UUID es el que sale de la formula OfflinePlayer:<nick> (las premium tienen UUID aleatorio). Sin skin que bajar: se ve Steve.
+     */
+    public static boolean currentIsOffline() {
+        Session s = Minecraft.getMinecraft().getSession();
+        if (s == null) return true;
+        if (s.getSessionType() == Session.Type.LEGACY) return true;
+        String pid = dashless(s.getPlayerID());
+        return pid.length() == 0 || pid.equals(dashless(offlineUuid(s.getUsername())));
+    }
+
     /** true si esta cuenta es la que esta jugando ahora. */
     public static boolean isActive(Entry e) {
         Session s = Minecraft.getMinecraft().getSession();

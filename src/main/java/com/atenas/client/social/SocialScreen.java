@@ -243,13 +243,7 @@ public class SocialScreen extends GuiScreen {
     /** Cara del jugador (o su inicial mientras llega) con marco del color de su estado y un punto de estado opcional. */
     private void avatar(String name, int x, int y, int s, int ring, boolean dim, boolean dot) {
         Draw.rect(x - 1, y - 1, s + 2, s + 2, ring);
-        ResourceLocation face = Faces.get(name);
-        if (face != null) {
-            mc.getTextureManager().bindTexture(face);
-            GlStateManager.enableBlend();
-            GlStateManager.color(1f, 1f, 1f, 1f);
-            Gui.drawScaledCustomSizeModalRect(x, y, 0f, 0f, 40, 40, s, s, 40f, 40f);
-        } else {
+        if (!Faces.draw(name, x, y, s, 1f, false)) {
             Draw.rect(x, y, s, s, 0xFF2A2550);
             String ini = name == null || name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(Locale.ROOT);
             Draw.centered(ini, x + s / 2, y + (s - 8) / 2, Theme.ACCENT);

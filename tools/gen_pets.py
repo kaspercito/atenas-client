@@ -123,6 +123,10 @@ def paint(variant, spec, seed):
                 for _ in range(max(2, w * h // 9)):
                     cx, cy, r = rng.uniform(0, w), rng.uniform(0, h), rng.uniform(.5, 1.3)
                     d.ellipse([U(cx - r), U(cy - r * .85), U(cx + r), U(cy + r * .85)], fill=spec["mark"] + (255,))
+                if spec.get("mark2"):   # segundo color de manchas (gato calico)
+                    for _ in range(max(1, w * h // 14)):
+                        cx, cy, r = rng.uniform(0, w), rng.uniform(0, h), rng.uniform(.6, 1.5)
+                        d.ellipse([U(cx - r), U(cy - r * .85), U(cx + r), U(cy + r * .85)], fill=spec["mark2"] + (255,))
             elif pat == "tabby":
                 if n in ("top", "right", "left", "htop", "hright", "hleft"):
                     for i in range(int(w) + 1):
@@ -199,10 +203,17 @@ PETS = {
                      nose=(200, 110, 130), eye=(232, 232, 70), muzzle=(54, 54, 66), tail_tip=(30, 30, 40), pattern=None),
     "zorro":    dict(model="fox", base=(232, 112, 40), belly=(250, 244, 236), dark=(196, 86, 24), ear=(224, 100, 34), ear_in=(250, 220, 200),
                      nose=(22, 18, 20), eye=(110, 60, 20), muzzle=(250, 244, 236), tail_tip=(252, 248, 240), pattern="fox", sock=(40, 30, 28)),
+    # Catalina: gata calico (blanca con manchas naranjas y negras). Privada: solo la ven y la eligen los nicks que le des en /admin.
+    "catalina": dict(model="cat", base=(246, 240, 232), belly=(255, 252, 248), dark=(232, 222, 210), ear=(222, 128, 56), ear_in=(244, 170, 170),
+                     nose=(232, 130, 140), eye=(110, 200, 90), muzzle=(255, 252, 248), tail_tip=(40, 36, 40), pattern="spots", mark=(226, 130, 52),
+                     mark2=(34, 30, 36), sock=(255, 250, 244)),
 }
 
 if __name__ == "__main__":
+    import sys
+    only = sys.argv[1:]   # p. ej. `python3 tools/gen_pets.py catalina` regenera solo esa
     for i, (n, spec) in enumerate(PETS.items()):
+        if only and n not in only: continue
         paint(n, spec, 100 + i)
     for k, v in LAYOUT.items():
         print(k, v)

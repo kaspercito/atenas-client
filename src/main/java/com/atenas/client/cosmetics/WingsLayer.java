@@ -10,12 +10,13 @@ import net.minecraft.client.renderer.entity.layers.LayerRenderer;
 import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 
 /**
- * Alas de plumas. La forma sale de {@link WingMesh} (cada pluma es una tira de segmentos que ondula); aqui solo se calcula
+ * Alas de plumas ({@link WingMesh}) y de membrana ({@link MembraneWing}). La forma sale de la malla (cada pluma es una tira de segmentos que ondula); aqui solo se calcula
  * la apertura del ala y se entregan los vertices al Tessellator. De lejos se dibujan con menos segmentos y una sola cara.
  */
 public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
     private final RenderPlayer renderer;
     private final WingMesh mesh = new WingMesh();
+    private final MembraneWing membrane = new MembraneWing();
     private final TessSink sink = new TessSink();
 
     /** Estado propio por jugador: la fase del aleteo avanza SIEMPRE y la mezcla suelo/aire es gradual (antes saltaba y se "reseteaba"). */
@@ -64,9 +65,12 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         // Con capa: las alas nacen justo detras de la capa (zoff) y casi pegadas al centro (outset): no la tapan ni quedan separadas.
         boolean cape = Cosmetics.of(p, Cosmetics.Type.CAPE) != null;
         if (cape) open *= 0.80f;
-        mesh.outset = cape ? 1.2f : 0f; // casi pegadas a la columna: nacen detras de la capa, no separadas
-        mesh.zoff = cape ? 2.0f : 0f;
-        if (p.isSneaking()) open = cape ? 0.9f : 1.15f;
+        open *= item.openMul; // cada cosmetico puede abrir mas o menos (por defecto 1)
+        float outset = cape ? 1.2f : 0f; // casi pegadas a la columna: nacen detras de la capa, no separadas
+        float zoff = cape ? 2.0f : 0f;
+        mesh.outset = outset; mesh.zoff = zoff;
+        membrane.outset = outset; membrane.zoff = zoff;
+        if (p.isSneaking()) open = (cape ? 0.9f : 1.15f) * item.openMul;
         float flap = 0.025f + 0.075f * a; // siempre ondulan un poco; mas en el aire
 
         GlStateManager.color(1f, 1f, 1f, 1f);
@@ -80,7 +84,8 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         WorldRenderer wr = t.getWorldRenderer();
         wr.begin(7, DefaultVertexFormats.POSITION_TEX_NORMAL); // 7 = GL_QUADS
         sink.wr = wr;
-        mesh.emit(sink, open, st.phase, flap, segs, twoSided, 0.0625f);
+        if (item.membrane) membrane.emit(sink, open, st.phase, flap, twoSided, 0.0625f);
+        else mesh.emit(sink, open, st.phase, flap, segs, twoSided, 0.0625f);
         sink.wr = null;
         t.draw();
 

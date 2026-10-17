@@ -28,13 +28,15 @@ public final class AtenasFont {
     private static final int SS = 4;              // supersampling
     private static final float PX = 9.6f;         // alto de letra en unidades de GUI
     private static final int FIRST = 32, LAST = 255, COLS = 16, CW = 56, CH = 64, ATLAS = 1024;
+    /** Glifos extra dibujados a mano (la fuente .ttf no los trae y salian como \"?\"): punto lleno y punto vacio. */
+    private static final int DOT_FULL = LAST + 1, DOT_RING = LAST + 2, TOTAL = LAST + 3;
     private static final int[] PALETTE = {0x000000, 0x0000AA, 0x00AA00, 0x00AAAA, 0xAA0000, 0xAA00AA, 0xFFAA00, 0xAAAAAA,
             0x555555, 0x5555FF, 0x55FF55, 0x55FFFF, 0xFF5555, 0xFF55FF, 0xFFFF55, 0xFFFFFF};
 
     private static boolean tried, ok;
     private static ResourceLocation tex;
-    private static final float[] ADV = new float[LAST + 1];
-    private static final int[] GW = new int[LAST + 1];
+    private static final float[] ADV = new float[TOTAL];
+    private static final int[] GW = new int[TOTAL];
     private static float ascent;
 
     private AtenasFont() {}
@@ -67,6 +69,19 @@ public final class AtenasFont {
                 GW[c] = (int) Math.ceil(ADV[c]) + 4;
                 g.drawString(String.valueOf((char) c), cx + 2, cy + 8 + ascent);
             }
+            // puntos de estado (\u25cf \u25cb) dibujados como figuras, del tamano de una letra
+            float d = PX * SS * 0.5f;
+            for (int c = DOT_FULL; c <= DOT_RING; c++) {
+                int i = c - FIRST, cx = (i % COLS) * CW, cy = (i / COLS) * CH;
+                ADV[c] = d * 1.45f;
+                GW[c] = (int) Math.ceil(ADV[c]) + 4;
+                float ox = cx + 2 + (ADV[c] - d) / 2f, oy = cy + 8 + ascent - d * 1.05f;
+                if (c == DOT_FULL) g.fill(new java.awt.geom.Ellipse2D.Float(ox, oy, d, d));
+                else {
+                    g.setStroke(new java.awt.BasicStroke(Math.max(2f, d * 0.16f)));
+                    g.draw(new java.awt.geom.Ellipse2D.Float(ox + 1.5f, oy + 1.5f, d - 3f, d - 3f));
+                }
+            }
             g.dispose();
             DynamicTexture dt = new DynamicTexture(img);
             tex = Minecraft.getMinecraft().getTextureManager().getDynamicTextureLocation("atenas_font", dt);
@@ -80,7 +95,13 @@ public final class AtenasFont {
         }
     }
 
-    private static int idx(char c) { return c < FIRST || c > LAST ? '?' : c; }
+    private static int idx(char c) {
+        if (c == '\u25cf') return DOT_FULL;
+        if (c == '\u25cb') return DOT_RING;
+        if (c == '\u2022') return DOT_FULL;
+        if (c == '\u2026') return '.';
+        return c < FIRST || c > LAST ? '?' : c;
+    }
 
     /** Ancho en unidades de GUI (ignora los codigos de color). */
     public static float widthF(String s) {

@@ -74,6 +74,12 @@ public final class SocialClient {
         void done(T value, String error);
     }
 
+    /** Error que devolvio el servicio (con su codigo, p. ej. verify_required). Un IOException normal es un fallo de red. */
+    public static final class ApiError extends IOException {
+        public final String code;
+        public ApiError(String code, String message) { super(message); this.code = code; }
+    }
+
     public static boolean enabled = true;
     public static boolean toasts = true;
     public static boolean sharePresence = true;
@@ -89,6 +95,11 @@ public final class SocialClient {
     private static volatile String lastPoll;
     private static long lastSync, lastPollAt;
     private static boolean identityLoaded;
+    /** Nick (en minusculas) que ya demostro con Mojang que su cuenta premium es suya, y ultimo intento que no se pudo verificar. */
+    private static String verifiedFor = "";
+    private static String failedFor = "";
+    private static long failedAt;
+    private static final long RETRY_UNVERIFIED_MS = 30L * 60L * 1000L;
 
     private static final ExecutorService POOL = Executors.newSingleThreadExecutor(new ThreadFactory() {
         @Override public Thread newThread(Runnable r) {
@@ -111,6 +122,9 @@ public final class SocialClient {
         Snapshot s = snap;
         return s == null ? 0 : s.incoming.size() + s.unread;
     }
+
+    /** URL base del servicio (la misma que usa Amigos): de aqui salen el catalogo y las texturas de cosmeticos. */
+    public static String baseUrl() { loadIdentity(); return url; }
 
     public static String myName() {
         String n = Minecraft.getMinecraft().getSession().getUsername();
@@ -167,8 +181,58 @@ public final class SocialClient {
         }
     }
 
-    /** POST al servicio. Lanza IOException con mensaje legible para el usuario. */
+    /** True si esta cuenta ya demostro con Mojang que es premium y suya (los cosmeticos privados lo exigen). */
+    public static synchronized boolean verified() { return myName().equalsIgnoreCase(verifiedFor); }
+
+    /**
+     * Verificacion premium: pide un desafio al servicio, lo registra en Mojang con TU sesion (joinServer, solo el dueno de la
+     * cuenta puede) y el servicio lo comprueba con Mojang (hasJoined). Con una cuenta sin conexion Mojang lo rechaza y la cuenta
+     * queda sin verificar (todo funciona, menos los cosmeticos privados). Nunca lanza: si falla, el servicio la trata como no verificada.
+     */
+    private static synchronized void ensureVerified(boolean force) {
+        String name = myName().toLowerCase();
+        if (!force && name.equals(verifiedFor)) return;
+        if (!force && name.equals(failedFor) && System.currentTimeMillis() - failedAt < RETRY_UNVERIFIED_MS) return;
+        try {
+            JsonObject ch = rawPost("/auth/challenge", new JsonObject());
+            Minecraft mc = Minecraft.getMinecraft();
+            try {
+                mc.getSessionService().joinServer(mc.getSession().getProfile(), mc.getSession().getToken(), str(ch, "serverId"));
+            } catch (Exception e) {
+                failedFor = name; failedAt = System.currentTimeMillis(); // Mojang no acepto la sesion: cuenta sin conexion o sesion caducada
+                return;
+            }
+            rawPost("/auth/verify", new JsonObject());
+            verifiedFor = name;
+            failedFor = "";
+        } catch (ApiError e) {
+            if (!"mojang_down".equals(e.code) && !"too_many".equals(e.code) && !"no_challenge".equals(e.code) && !"server".equals(e.code)) {
+                failedFor = name; failedAt = System.currentTimeMillis(); // el servicio dijo que no: se reintenta mas tarde
+            }
+        } catch (IOException e) {
+            // sin internet: se reintenta en la proxima llamada
+        }
+    }
+
+    /** POST al servicio. Lanza IOException con mensaje legible para el usuario (ApiError si la respuesta vino del servicio). */
     public static JsonObject post(String route, JsonObject body) throws IOException {
+        loadIdentity();
+        String name = myName();
+        if (!validName(name)) throw new IOException("Tu nick no es valido para el servicio de amigos.");
+        ensureVerified(false);
+        try {
+            return rawPost(route, body);
+        } catch (ApiError e) {
+            // este nick esta verificado desde otra instalacion y esta aun no: se demuestra con la sesion de Minecraft y se reintenta una vez
+            if (!"verify_required".equals(e.code)) throw e;
+            synchronized (SocialClient.class) { verifiedFor = ""; failedFor = ""; }
+            ensureVerified(true);
+            if (!verified()) throw e;
+            return rawPost(route, body);
+        }
+    }
+
+    private static JsonObject rawPost(String route, JsonObject body) throws IOException {
         loadIdentity();
         String name = myName();
         if (!validName(name)) throw new IOException("Tu nick no es valido para el servicio de amigos.");
@@ -196,6 +260,7 @@ public final class SocialClient {
         try { o = new JsonParser().parse(res).getAsJsonObject(); } catch (Exception ignored) { }
         if (o == null || code >= 400 || (o.has("ok") && !o.get("ok").getAsBoolean())) {
             String msg = (o != null && o.has("message")) ? o.get("message").getAsString() : "El servicio respondio con error " + code + ".";
+            if (o != null && o.has("error")) throw new ApiError(o.get("error").getAsString(), msg);
             throw new IOException(msg);
         }
         return o;
@@ -314,6 +379,7 @@ public final class SocialClient {
 
     /** Cambio de cuenta dentro del juego: la lista de amigos y el chat eran de la otra persona; se pide todo de nuevo. */
     public static void onAccountChanged() {
+        synchronized (SocialClient.class) { verifiedFor = ""; failedFor = ""; }
         snap = null;
         status = "loading";
         error = "";

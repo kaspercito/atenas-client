@@ -4,6 +4,7 @@ import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -12,6 +13,9 @@ import java.util.Set;
 import javax.imageio.ImageIO;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.resources.DefaultPlayerSkin;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.util.ResourceLocation;
 
@@ -20,15 +24,17 @@ import net.minecraft.util.ResourceLocation;
  * el launcher (mc-heads.net). Mientras llegan, o si no hay conexion, el aviso muestra la inicial del nick. Solo el hilo principal
  * llama a {@link #get}.
  */
-final class Faces {
+public final class Faces {
     private static final int SIZE = 40;
     private static final Map<String, ResourceLocation> READY = new HashMap<String, ResourceLocation>();
     private static final Set<String> BUSY = new HashSet<String>();
+    /** Nicks cuya cara no se pudo bajar (no existe, sin conexion...): se dibujan como Steve. Lo escribe el hilo de descarga. */
+    private static final Set<String> FAILED = Collections.synchronizedSet(new HashSet<String>());
 
     private Faces() {}
 
     /** La textura de la cara, o null si todavia no llego (o no se pudo bajar). */
-    static ResourceLocation get(String name) {
+    public static ResourceLocation get(String name) {
         if (name == null || !SocialClient.validName(name)) return null;
         final String key = name.toLowerCase(java.util.Locale.ROOT);
         ResourceLocation rl = READY.get(key);
@@ -45,18 +51,52 @@ final class Faces {
                     InputStream in = c.getInputStream();
                     final BufferedImage img;
                     try { img = ImageIO.read(in); } finally { in.close(); }
-                    if (img == null) return;
+                    if (img == null) { FAILED.add(key); return; }
                     Minecraft.getMinecraft().addScheduledTask(new Runnable() {
                         @Override public void run() {
                             READY.put(key, Minecraft.getMinecraft().getTextureManager()
                                     .getDynamicTextureLocation("atenas_face_" + key, new DynamicTexture(img)));
                         }
                     });
-                } catch (Exception ignored) { /* sin cara: se ve la inicial */ }
+                } catch (Exception ignored) { FAILED.add(key); /* sin cara: se dibuja Steve */ }
             }
         }, "Atenas-Face");
         t.setDaemon(true);
         t.start();
         return null;
+    }
+
+    /** true si ya se sabe que no hay cara para este nick (entonces se usa Steve). */
+    public static boolean failed(String name) {
+        return name != null && FAILED.contains(name.toLowerCase(java.util.Locale.ROOT));
+    }
+
+    /** Dibuja la cabeza de Steve (con la capa del sombrero), a "size" pixeles de GUI. */
+    public static void drawSteve(int x, int y, int size, float alpha) {
+        Minecraft.getMinecraft().getTextureManager().bindTexture(DefaultPlayerSkin.getDefaultSkinLegacy());
+        GlStateManager.enableBlend();
+        GlStateManager.color(1f, 1f, 1f, alpha);
+        Gui.drawScaledCustomSizeModalRect(x, y, 8f, 8f, 8, 8, size, size, 64f, 32f);
+        Gui.drawScaledCustomSizeModalRect(x, y, 40f, 8f, 8, 8, size, size, 64f, 32f);
+        GlStateManager.color(1f, 1f, 1f, 1f);
+    }
+
+    /**
+     * Dibuja la cabeza del jugador. "steve" = true fuerza a Steve (cuenta sin conexion: no tiene skin que bajar). Devuelve false
+     * mientras la cara todavia esta llegando; entonces quien llama pone la inicial. Si la descarga falla, se dibuja Steve.
+     */
+    public static boolean draw(String name, int x, int y, int size, float alpha, boolean steve) {
+        if (steve || name == null || !SocialClient.validName(name)) { drawSteve(x, y, size, alpha); return true; }
+        ResourceLocation face = get(name);
+        if (face != null) {
+            Minecraft.getMinecraft().getTextureManager().bindTexture(face);
+            GlStateManager.enableBlend();
+            GlStateManager.color(1f, 1f, 1f, alpha);
+            Gui.drawScaledCustomSizeModalRect(x, y, 0f, 0f, SIZE, SIZE, size, size, (float) SIZE, (float) SIZE);
+            GlStateManager.color(1f, 1f, 1f, 1f);
+            return true;
+        }
+        if (failed(name)) { drawSteve(x, y, size, alpha); return true; }
+        return false;
     }
 }

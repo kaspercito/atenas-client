@@ -52,6 +52,7 @@ public class AtenasClient {
 
         ModuleManager.init();
         Config.load();
+        com.atenas.client.cosmetics.CatalogSync.loadCache(); // ultimo catalogo conocido (sin red): reglas privadas y cosmeticos nuevos
         CosmeticSync.ensureToken();
         Config.save();
 
@@ -59,6 +60,7 @@ public class AtenasClient {
         register(ModuleManager.INSTANCE);
         register(new Stats());
         register(new CosmeticSync());
+        register(new com.atenas.client.cosmetics.CatalogSync());
         register(new PetRender());
         register(new SocialEvents());
         register(new com.atenas.client.social.Badge());

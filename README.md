@@ -20,7 +20,7 @@ Cliente PvP propio para Minecraft 1.8.9, hecho como mod de Forge. Todo el codigo
 
 **Idioma:** todo el cliente (mods, ajustes, menus y menu principal) sale en el idioma del juego: espanol si el juego esta en espanol, ingles en cualquier otro idioma. Los textos nuevos se traducen en `core/Lang.java`.
 
-**Cosmeticos (se ven en tu personaje y, con el Worker, en los demas usuarios de Atenas):** 20 capas de tela segmentada (6 animadas), 9 alas de plumas con aleteo, 9 sombreros y 6 mascotas que te siguen (perro, husky, dalmata, gato, gato negro y zorro); son los mismos que en el mod de 1.20.1. Vista previa giratoria en el menu.
+**Cosmeticos (se ven en tu personaje y, con el Worker, en los demas usuarios de Atenas):** 22 capas de tela segmentada (17 animadas), 13 alas de plumas y 10 de membrana (23 alas en total, con aleteo), 9 sombreros y 7 mascotas que te siguen (perro, husky, dalmata, gato, gato negro, zorro y Catalina, que es privada); son los mismos que en el mod de 1.20.1. Vista previa giratoria en el menu.
 
 **Interfaz:** menu principal futurista (Principal, Singleplayer, Multiplayer, Opciones y X para cerrar), Amigos y chat (Shift+Tab, menu principal y pausa) con solicitudes, estado en linea y avisos propios (con la cara del jugador); menu principal de Atenas, menu del cliente (RShift) con ajustes por modulo, Editor HUD (arrastrar + rueda para tamano). Config en `.minecraft/config/atenasclient.json`.
 
@@ -53,7 +53,7 @@ Camino mas facil y fiable:
 - Los cosmeticos de otros jugadores solo se ven si despliegas el Worker de `worker/` y pones su URL (ver COMPILAR.md). Un nick lo reclama quien lo registra primero (token por instalacion); sin cuentas de Mojang no se puede verificar mas.
 - **Animaciones 1.7 (Mixin):** `Animaciones 1.7` hace que el objeto se balancee al bloquear, comer/beber y tensar el arco en primera persona (`MixinItemRenderer`) ; el golpe lo dispara `OldAnimationsModule` (un clic = un balanceo, mantener clic sobre un bloque = balanceo continuo, tambien al comer y con el arco). `MixinMinecraft` solo se usa si activas "Picar el bloque de verdad". Siguen SIN incluir: la pose de espada en tercera persona, el color de golpe y el motion blur.
 - **OptiFine:** no se incluye ni se reescribe (su licencia no permite redistribuirlo y es de codigo cerrado). El launcher lo baja solo de optifine.net en el PC del jugador la primera vez que juega (o con el boton de Ajustes > OptiFine); si eso falla, queda el metodo manual. Con OptiFine cargado, el modulo Rendimiento no toca nada (OptiFine manda en los graficos). El launcher acepta el .jar aunque el navegador lo haya renombrado ("(1)", espacios, preview_), comprueba que de verdad sea OptiFine, lo busca solo en Descargas/Escritorio/Documentos al pulsar Jugar y quita cualquier otro OptiFine de la carpeta mods para que no haya dos.
-- **Cosmeticos:** 14 capas, 9 alas y 9 sombreros (los nuevos se generan con `tools/gen_cosmetics.py`; no hace falta tocar el Worker, acepta cualquier id).
+- **Cosmeticos:** 22 capas, 23 alas, 9 sombreros y 7 mascotas. Los del mod se generan con `tools/gen_*.py`; los nuevos sin recompilar se crean desde `/admin` del Worker (ids `x_...`). Revisa medidas con `tools/check_textures.py` y dibuja sobre `tools/gen_plantillas.py`. Despliegue: `DESPLIEGUE.md`.
 - Mixin va empaquetado dentro del jar (ver `build.gradle`). Si el mixin no engancha, el juego arranca igual y el modulo no hace nada: revisa `logs/latest.log` buscando `[mixin]`.
 
 ## Estado

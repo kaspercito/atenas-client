@@ -26,6 +26,7 @@ import com.atenas.client.social.SocialClient;
 import com.atenas.client.social.SocialEvents;
 import com.atenas.client.social.SocialScreen;
 
+import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiTextField;
@@ -84,6 +85,11 @@ public class AtenasMenu extends GuiScreen {
     private Module.Category filter;      // null = todos
     private boolean settingsOpen;
     private Cosmetics.Type cosFilter = Cosmetics.Type.CAPE;  // pestana activa
+    private boolean spinPaused;          // vista previa: giro en pausa
+    private float spinAngle;             // angulo actual de la vista previa
+    private long spinLast;
+    private AbstractClientPlayer mannequin;   // jugador de mentira para la vista previa sin mundo
+    private int mannequinFails;
     private final List<GuiTextField> atFields = new ArrayList<GuiTextField>();
     private int atCapturing = -1;
     private boolean atDirty = true;
@@ -340,10 +346,6 @@ public class AtenasMenu extends GuiScreen {
             Draw.text(ok ? "\u25cf Mixin activo" : "\u25cb Mixin sin comprobar (entra a un mundo con un objeto en la mano)", px, py + 2, ok ? Theme.GREEN : Theme.AMBER);
             py += 12;
         }
-        if (m instanceof PerformanceModule && AtenasClient.hasOptiFine()) {
-            Draw.text("\u25cf OptiFine detectado: este mod no cambia nada (usa los ajustes de OptiFine)", px, py + 2, Theme.GREEN);
-            py += 12;
-        }
         py += 6;
 
         py = row(px, py, pwid, "Activado", m.isEnabled(), new Runnable() {
@@ -575,16 +577,32 @@ public class AtenasMenu extends GuiScreen {
         hits.add(new Hit(bx, top + 22, prevW, 22, new Runnable() {
             @Override public void run() { Cosmetics.animate = !Cosmetics.animate; Config.save(); }
         }));
-        if (mc.thePlayer != null) {
-            drawPlayer(bx + prevW / 2, top + listH - 14, Math.max(30, Math.min(70, listH / 3)));
+        // botones de la vista previa: pausar/girar y quitar todo lo equipado
+        final int by1 = top + 44;
+        smallButton(spinPaused ? "Girar" : "Pausar", bx + 6, by1, prevW - 12, mx, my, new Runnable() {
+            @Override public void run() { spinPaused = !spinPaused; }
+        });
+        smallButton("Quitar todo", bx + 6, by1 + 22, prevW - 12, mx, my, new Runnable() {
+            @Override public void run() { for (Cosmetics.Type t : Cosmetics.Type.values()) Cosmetics.select(t, null); }
+        });
+        long nowMs = System.currentTimeMillis();
+        if (!spinPaused) spinAngle = (spinAngle + (nowMs - spinLast) * 0.06f) % 360f;
+        spinLast = nowMs;
+        int pScale = Math.max(26, Math.min(60, (listH - 96) / 2));
+        AbstractClientPlayer who = mc.thePlayer != null ? mc.thePlayer : mannequin();
+        if (who != null) {
+            drawPlayer(who, bx + prevW / 2 - 12, top + listH - 10, pScale);
         } else {
             List<String> msg = fontRendererObj.listFormattedStringToWidth(
-                    "Entra a un mundo para ver la vista previa. Igual puedes elegir tus cosm\u00e9ticos.", prevW - 16);
-            int ty = top + listH / 2 - msg.size() * 5;
+                    "No se pudo crear la vista previa. Igual puedes elegir tus cosm\u00e9ticos.", prevW - 16);
+            int ty = top + listH / 2 + 20 - msg.size() * 5;
             for (String l : msg) {
                 Draw.centered(l, bx + prevW / 2, ty, Theme.DIM);
                 ty += 10;
             }
+        }
+        if (Cosmetics.notice.length() > 0 && System.currentTimeMillis() < Cosmetics.noticeUntil) {
+            Draw.text(Draw.fit(Cosmetics.notice, bw - prevW - 16), bx + prevW + 12, by + 5, Theme.AMBER);
         }
 
         int lx = bx + prevW + 8, lw = bw - prevW - 8;
@@ -613,7 +631,7 @@ public class AtenasMenu extends GuiScreen {
 
         List<Cosmetics.Item> entries = new ArrayList<Cosmetics.Item>();
         entries.add(null); // "Ninguno"
-        for (Cosmetics.Item i : Cosmetics.ALL) if (i.type == ty) entries.add(i);
+        entries.addAll(Cosmetics.visible(ty)); // los privados ajenos no salen
         int rowsN = (entries.size() + cols - 1) / cols;
         int total = rowsN * (ch + gap) + 4;
         scrollCos = Math.max(0, Math.min(scrollCos, Math.max(0, total - gh)));
@@ -647,9 +665,8 @@ public class AtenasMenu extends GuiScreen {
     }
 
     /** Jugador girando para ver capa, alas y sombrero desde todos los lados. */
-    private void drawPlayer(int posX, int posY, int scale) {
-        EntityPlayerSP ent = mc.thePlayer;
-        float spin = (System.currentTimeMillis() % 6000L) / 6000f * 360f;
+    private void drawPlayer(AbstractClientPlayer ent, int posX, int posY, int scale) {
+        float spin = spinAngle;
         GlStateManager.enableColorMaterial();
         GlStateManager.pushMatrix();
         GlStateManager.translate((float) posX, (float) posY, 50f);
@@ -671,7 +688,12 @@ public class AtenasMenu extends GuiScreen {
         RenderManager rm = mc.getRenderManager();
         rm.setPlayerViewY(180f);
         rm.setRenderShadow(false);
-        rm.renderEntityWithPosYaw(ent, 0.0, 0.0, 0.0, 0f, 1f);
+        try {
+            rm.renderEntityWithPosYaw(ent, 0.0, 0.0, 0.0, 0f, 1f);
+        } catch (RuntimeException ex) {
+            // sin mundo, el nombre del maniqui puede fallar al final del dibujo (el cuerpo ya se dibujo): no es un error
+            if (ent != mc.thePlayer && ++mannequinFails > 30) mannequin = null;
+        }
         rm.setRenderShadow(true);
         ent.renderYawOffset = rYawOff;
         ent.prevRenderYawOffset = rPrevOff;
@@ -679,12 +701,41 @@ public class AtenasMenu extends GuiScreen {
         ent.rotationPitch = rPitch;
         ent.prevRotationYawHead = rPrevHead;
         ent.rotationYawHead = rHead;
+        // la mascota elegida, a un lado (en el mismo marco del jugador, sin girar con el)
+        Cosmetics.Item pet = Cosmetics.selected(Cosmetics.Type.PET);
+        if (pet != null) {
+            GlStateManager.pushMatrix();
+            GlStateManager.rotate(-135f, 0f, 1f, 0f);
+            GlStateManager.rotate(135f, 0f, 1f, 0f);
+            com.atenas.client.cosmetics.PetRender.renderPreview(pet);
+            GlStateManager.popMatrix();
+        }
         GlStateManager.popMatrix();
         RenderHelper.disableStandardItemLighting();
         GlStateManager.disableRescaleNormal();
         GlStateManager.setActiveTexture(OpenGlHelper.lightmapTexUnit);
         GlStateManager.disableTexture2D();
         GlStateManager.setActiveTexture(OpenGlHelper.defaultTexUnit);
+    }
+
+    /** Jugador de mentira (en un mundo vacio) para la vista previa cuando no hay partida. Devuelve null si no se puede crear. */
+    private AbstractClientPlayer mannequin() {
+        if (mannequin != null) return mannequin;
+        if (mannequinFails > 30 || mc.getSession() == null) return null;
+        try {
+            net.minecraft.world.WorldSettings ws = new net.minecraft.world.WorldSettings(0L,
+                    net.minecraft.world.WorldSettings.GameType.SURVIVAL, false, false, net.minecraft.world.WorldType.DEFAULT);
+            net.minecraft.client.multiplayer.WorldClient w = new net.minecraft.client.multiplayer.WorldClient(null, ws, 0,
+                    net.minecraft.world.EnumDifficulty.PEACEFUL, mc.mcProfiler);
+            mannequin = new net.minecraft.client.entity.EntityOtherPlayerMP(w, mc.getSession().getProfile()) {
+                @Override public int getBrightnessForRender(float pt) { return 15728880; } // sin mundo la luz seria 0
+            };
+            Cosmetics.previewPlayer = mannequin;
+        } catch (Throwable t) {
+            mannequinFails = 99;
+            System.err.println("[AtenasClient] maniqui de vista previa: " + t);
+        }
+        return mannequin;
     }
 
     // ------------------------------------------------------------------ about
@@ -842,5 +893,5 @@ public class AtenasMenu extends GuiScreen {
     }
 
     @Override
-    public void onGuiClosed() { Keyboard.enableRepeatEvents(false); Config.save(); }
+    public void onGuiClosed() { Cosmetics.previewPlayer = null; mannequin = null; Keyboard.enableRepeatEvents(false); Config.save(); }
 }

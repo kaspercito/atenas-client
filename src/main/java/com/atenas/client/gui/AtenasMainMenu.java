@@ -6,7 +6,9 @@ import java.util.Random;
 import org.lwjgl.input.Keyboard;
 
 import com.atenas.client.AtenasClient;
+import com.atenas.client.account.Accounts;
 import com.atenas.client.core.Lang;
+import com.atenas.client.social.Faces;
 import com.atenas.client.social.SocialClient;
 import com.atenas.client.social.SocialEvents;
 import com.atenas.client.social.SocialScreen;
@@ -18,7 +20,7 @@ import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiSelectWorld;
 
 /**
- * Menu principal de Atenas (oro sobre azul tinta): Un jugador, Multijugador, Opciones, Principal, Amigos, Cuenta y una X para cerrar. Un solo idioma, el del juego.
+ * Menu principal de Atenas (violeta sobre azul noche): Un jugador, Multijugador, Opciones, Amigos, Cuenta y una X para cerrar. Un solo idioma, el del juego.
  * Todo se calcula desde {@link #layout()}: el bloque (logo + botones) queda centrado y se compacta solo en pantallas chicas.
  */
 public class AtenasMainMenu extends GuiScreen {
@@ -59,7 +61,7 @@ public class AtenasMainMenu extends GuiScreen {
     /** El launcher espera esta linea en la consola del juego para cerrar su ventana de carga. */
     private static boolean readyAnnounced;
 
-    // niveles de tamano: {logo, escala del nombre, alto de la marca, separacion, alto de boton, hueco entre botones, recorte de los botones chicos}
+    // niveles de tamano: {logo, escala del nombre, alto de la marca, separacion, alto de boton, hueco entre botones, recorte de los botones chicos} (abajo: una sola fila chica con Amigos y Cuenta)
     private static final float[][] TIERS = {
         {64, 3f, 112, 24, 26, 5, 4},
         {40, 2f, 82, 12, 22, 4, 4},
@@ -85,7 +87,7 @@ public class AtenasMainMenu extends GuiScreen {
             gap = (int) t[5];
             sh = bh - (int) t[6];
             bw = 250;
-            int btnsH = 3 * bh + 2 * gap + 8 + sh + 6 + sh;
+            int btnsH = 3 * bh + 2 * gap + 8 + sh;
             total = brandH + sep + btnsH;
             if (total <= avail || tier == TIERS.length - 1) break;
         }
@@ -104,10 +106,9 @@ public class AtenasMainMenu extends GuiScreen {
         buttonList.add(new MenuButton(ID_SINGLE, bx, btnY, bw, bh, Lang.t("Un jugador", "Singleplayer"), null, false));
         buttonList.add(new MenuButton(ID_MULTI, bx, btnY + (bh + gap), bw, bh, Lang.t("Multijugador", "Multiplayer"), null, false));
         buttonList.add(new MenuButton(ID_OPTIONS, bx, btnY + 2 * (bh + gap), bw, bh, Lang.t("Opciones", "Options"), null, false));
-        buttonList.add(new MenuButton(ID_MODS, bx, y2, bw, sh, Lang.t("Principal", "Main"), Lang.t("Mods y cosm\u00e9ticos", "Mods & cosmetics"), true));
-        friendsBtn = new MenuButton(ID_FRIENDS, bx, y2 + sh + 6, half, sh, Lang.t("Amigos", "Friends"), "Shift+Tab", true);
+        friendsBtn = new MenuButton(ID_FRIENDS, bx, y2, half, sh, Lang.t("Amigos", "Friends"), "Shift+Tab", true);
         buttonList.add(friendsBtn);
-        buttonList.add(new MenuButton(ID_ACCOUNT, bx + half + 6, y2 + sh + 6, half, sh, Lang.t("Cuenta", "Account"), Lang.t("Cambiar", "Switch"), true));
+        buttonList.add(new MenuButton(ID_ACCOUNT, bx + half + 6, y2, half, sh, Lang.t("Cuenta", "Account"), Lang.t("Cambiar", "Switch"), true));
         buttonList.add(new CloseButton(ID_CLOSE, width - 32, 10, 22));
         SocialClient.sync(false, "");
         if (!readyAnnounced) {
@@ -240,6 +241,7 @@ public class AtenasMainMenu extends GuiScreen {
     private int drawAccountChip(int mx, int my) {
         String user = mc.getSession() == null ? "" : mc.getSession().getUsername();
         boolean online = SocialClient.usable();
+        boolean offlineAcc = Accounts.currentIsOffline(); // sin conexion = no premium: se dibuja Steve
         boolean over;
         if (tight) {
             chipH = 16;
@@ -251,8 +253,10 @@ public class AtenasMainMenu extends GuiScreen {
             Draw.rect(chipX, chipY, chipW, chipH, over ? Theme.PANEL2 : 0xC00B0E1C);
             Draw.border(chipX, chipY, chipW, chipH, over ? Theme.VIOLET : 0xFF262A48);
             Draw.rect(chipX, chipY, 2, chipH, over ? Theme.ACCENT : Theme.ACCENT_DIM);
-            Draw.rect(chipX + 4, chipY + 2, 12, 12, Theme.VIOLET);
-            if (user.length() > 0) Draw.centered(user.substring(0, 1).toUpperCase(), chipX + 10, chipY + 4, Theme.INK);
+            if (!Faces.draw(user, chipX + 4, chipY + 2, 12, 1f, offlineAcc)) {
+                Draw.rect(chipX + 4, chipY + 2, 12, 12, Theme.VIOLET);
+                if (user.length() > 0) Draw.centered(user.substring(0, 1).toUpperCase(), chipX + 10, chipY + 4, Theme.INK);
+            }
             Draw.text(user, chipX + 22, chipY + 4, over ? Theme.ACCENT : Theme.TEXT);
             Draw.rect(chipX + chipW - 12, chipY + 6, 5, 5, online ? Theme.GREEN : Theme.OFF);
             return chipX;
@@ -267,8 +271,11 @@ public class AtenasMainMenu extends GuiScreen {
         Draw.rect(chipX, chipY, chipW, chipH, over ? Theme.PANEL2 : 0xC00B0E1C);
         Draw.border(chipX, chipY, chipW, chipH, over ? Theme.VIOLET : 0xFF262A48);
         Draw.rect(chipX, chipY, 2, chipH, over ? Theme.ACCENT : Theme.ACCENT_DIM);
-        Draw.rect(chipX + 6, chipY + 4, 18, 18, Theme.VIOLET);
-        if (user.length() > 0) Draw.centered(user.substring(0, 1).toUpperCase(), chipX + 15, chipY + 9, Theme.INK);
+        Draw.rect(chipX + 5, chipY + 3, 20, 20, over ? Theme.ACCENT : Theme.ACCENT_DIM);
+        if (!Faces.draw(user, chipX + 6, chipY + 4, 18, 1f, offlineAcc)) {
+            Draw.rect(chipX + 6, chipY + 4, 18, 18, Theme.VIOLET);
+            if (user.length() > 0) Draw.centered(user.substring(0, 1).toUpperCase(), chipX + 15, chipY + 9, Theme.INK);
+        }
         Draw.text(user, chipX + 31, chipY + 4, over ? Theme.ACCENT : Theme.TEXT);
         if (over) Draw.text(Lang.t("Cambiar de cuenta", "Switch account"), chipX + 31, chipY + 14, Theme.VIOLET);
         else Draw.text(online ? Lang.t("\u25cf en l\u00ednea", "\u25cf online") : Lang.t("\u25cb desconectado", "\u25cb offline"), chipX + 31, chipY + 14, online ? Theme.GREEN : Theme.DIM);

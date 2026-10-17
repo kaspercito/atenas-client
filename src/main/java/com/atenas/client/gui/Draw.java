@@ -101,9 +101,22 @@ public final class Draw {
         else mc().fontRendererObj.drawStringWithShadow(s, x, y, color);
     }
 
-    /** Titulo en mayusculas con letras separadas (look futurista). */
+    /** Quita los codigos de color/formato de Minecraft (§ + letra o cifra). */
+    public static String stripCodes(String s) {
+        if (s == null || s.indexOf('\u00a7') < 0) return s;
+        StringBuilder sb = new StringBuilder(s.length());
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '\u00a7' && i + 1 < s.length()) { i++; continue; }
+            if (c == '\u00a7') continue;
+            sb.append(c);
+        }
+        return sb.toString();
+    }
+
+    /** Titulo en mayusculas con letras separadas (look futurista). Los codigos de color del texto original se ignoran. */
     public static void heading(String s, int x, int y, int color) {
-        s = Lang.tr(s).toUpperCase();
+        s = stripCodes(Lang.tr(s)).toUpperCase();
         int cx = x;
         for (int i = 0; i < s.length(); i++) {
             String ch = String.valueOf(s.charAt(i));
@@ -113,10 +126,25 @@ public final class Draw {
     }
 
     public static int headingWidth(String s) {
-        s = Lang.tr(s).toUpperCase();
+        s = stripCodes(Lang.tr(s)).toUpperCase();
         int w = 0;
         for (int i = 0; i < s.length(); i++) w += width(String.valueOf(s.charAt(i))) + 1;
         return w;
+    }
+
+    /**
+     * Texto de un boton centrado en [x, x+w): si el titulo con letras separadas cabe, se usa; si no, se prueba en mayusculas
+     * normales, luego tal cual y, por ultimo, recortado con \"...\". Asi ningun texto se sale del boton.
+     */
+    public static void headingFit(String s, int x, int w, int y, int color, int shift) {
+        String clean = stripCodes(Lang.tr(s));
+        int avail = Math.max(8, w - 2);
+        int tw = headingWidth(clean);
+        if (tw <= avail) { heading(clean, x + (w - tw) / 2 + shift, y, color); return; }
+        String up = clean.toUpperCase();
+        if (width(up) > avail) up = clean;
+        up = fit(up, avail);
+        text(up, x + (w - width(up)) / 2, y, color);
     }
 
     public static int width(String s) {

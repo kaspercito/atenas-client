@@ -55,7 +55,13 @@ public class CosmeticSync {
     public static void markDirty() { dirty = true; rev++; lastPush = 0; }
 
     /** Cambiaste de cuenta: se baja lo que ESA cuenta tenia elegido en vez de subirle lo de la anterior. */
-    public static void accountChanged() { dirty = false; selfKnown = false; lastSelf = 0; rev++; }
+    public static void accountChanged() {
+        dirty = false; selfKnown = false; lastSelf = 0; rev++;
+        CatalogSync.accountChanged();
+    }
+
+    /** Los cosmeticos de los demas jugadores se vuelven a resolver (llego un catalogo nuevo). */
+    public static void touch() { stamp++; }
 
     /** Sube cada vez que cambia lo que sabemos de otros jugadores: Cosmetics vuelve a resolver su cache. */
     private static volatile int stamp;
@@ -89,14 +95,34 @@ public class CosmeticSync {
             final JsonObject o = new JsonObject();
             for (Cosmetics.Type t : Cosmetics.Type.values()) {
                 Cosmetics.Item i = Cosmetics.selected(t);
+                // eleccion que aun espera al catalogo: no se manda (el servicio conserva el campo que no viene)
+                if (i == null && Cosmetics.pendingId(t) != null) continue;
                 o.addProperty(t.name().toLowerCase(Locale.ROOT), i == null ? "none" : i.id);
             }
             run("Atenas-CosmeticPush", new Runnable() {
                 @Override public void run() {
                     try {
-                        SocialClient.post("/cosmetics/set", o);
+                        JsonObject res = SocialClient.post("/cosmetics/set", o);
                         if (sent == rev) dirty = false;
                         selfKnown = true;
+                        // el servicio no dejo guardar algo privado: se quita de tu seleccion y se avisa
+                        final List<String[]> denied = new ArrayList<String[]>();
+                        if (res.has("denied") && res.get("denied").isJsonArray()) {
+                            for (com.google.gson.JsonElement el : res.getAsJsonArray("denied")) {
+                                if (!el.isJsonObject()) continue;
+                                String ty = str(el.getAsJsonObject(), "type"), id = str(el.getAsJsonObject(), "id");
+                                if (ty != null && id != null) denied.add(new String[] {ty, id});
+                            }
+                        }
+                        if (!denied.isEmpty()) {
+                            Minecraft.getMinecraft().addScheduledTask(new Runnable() {
+                                @Override public void run() {
+                                    for (String[] d : denied) {
+                                        for (Cosmetics.Type t : Cosmetics.Type.values()) if (t.key().equals(d[0])) Cosmetics.denied(t, d[1]);
+                                    }
+                                }
+                            });
+                        }
                     } catch (IOException ex) {
                         lastPush = System.currentTimeMillis() + 10000L; // reintenta en ~13 s
                         System.err.println("[AtenasClient] push: " + ex.getMessage());

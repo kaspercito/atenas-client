@@ -103,10 +103,10 @@ public class PetRender {
             OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light & 65535, light >> 16);
             GlStateManager.color(1f, 1f, 1f, 1f);
 
-            String kind = PetSpec.kindFor(pet.item.id).name;
+            String kind = PetSpec.kindFor(pet.item.modelId()).name;
             PetModel model = models.get(kind);
             if (model == null) {
-                model = new PetModel(PetSpec.kindFor(pet.item.id));
+                model = new PetModel(PetSpec.kindFor(pet.item.modelId()));
                 models.put(kind, model);
             }
             mc.getTextureManager().bindTexture(pet.item.texture);
@@ -122,5 +122,50 @@ public class PetRender {
         GlStateManager.disableRescaleNormal();
         mc.entityRenderer.disableLightmap();
         RenderHelper.disableStandardItemLighting();
+    }
+
+    // ------------------------------------------------------------------ vista previa del menu
+
+    private static PetBrain previewBrain;
+    private static String previewKey = "";
+    private static long previewLast;
+    private static final Map<String, PetModel> PREVIEW_MODELS = new HashMap<String, PetModel>();
+    private static final PetBrain.Ground FLAT = new PetBrain.Ground() {
+        @Override public double ground(double x, double z, double fromY) { return 0.0; }
+    };
+
+    /**
+     * Dibuja la mascota elegida en la vista previa del menu, a un lado del jugador. La matriz ya debe estar en el marco del
+     * jugador (pies en el origen, 1 unidad = 1 bloque). La mascota se queda quieta junto a el y hace sus gestos de reposo.
+     */
+    public static void renderPreview(Cosmetics.Item item) {
+        if (item == null) return;
+        Minecraft mc = Minecraft.getMinecraft();
+        if (previewBrain == null || !previewKey.equals(item.id)) {
+            previewBrain = new PetBrain(item.id.hashCode());
+            previewBrain.teleport(0.0, 0.0, 0.0, 0f);
+            previewKey = item.id;
+            previewLast = System.currentTimeMillis();
+        }
+        long now = System.currentTimeMillis();
+        int ticks = (int) Math.min(5L, (now - previewLast) / 50L);
+        if (ticks > 0) previewLast += ticks * 50L;
+        for (int i = 0; i < ticks; i++) previewBrain.tick(0.0, 0.0, 0.0, 0f, false, FLAT);
+        float pt = Math.min(1f, (now - previewLast) / 50f);
+
+        String kind = PetSpec.kindFor(item.modelId()).name;
+        PetModel model = PREVIEW_MODELS.get(kind);
+        if (model == null) { model = new PetModel(PetSpec.kindFor(item.modelId())); PREVIEW_MODELS.put(kind, model); }
+        mc.getTextureManager().bindTexture(item.texture);
+        GlStateManager.color(1f, 1f, 1f, 1f);
+        GlStateManager.enableBlend();
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(0.95f, 0f, 0f);       // a un lado del jugador
+        GlStateManager.rotate(180f, 0f, 1f, 0f);       // mirando a la camara
+        GlStateManager.scale(-PetSpec.SCALE, -PetSpec.SCALE, PetSpec.SCALE);
+        GlStateManager.translate(0f, -1.501f, 0f);
+        model.render(previewBrain, pt, 0.0625f);
+        GlStateManager.popMatrix();
+        GlStateManager.disableBlend();
     }
 }

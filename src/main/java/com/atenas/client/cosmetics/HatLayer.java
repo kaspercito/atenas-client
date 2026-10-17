@@ -25,12 +25,12 @@ public class HatLayer implements LayerRenderer<AbstractClientPlayer> {
         GlStateManager.pushMatrix();
         if (p.isSneaking()) GlStateManager.translate(0f, 0.2f, 0f);
         renderer.getMainModel().bipedHead.postRender(0.0625f);
-        boolean glow = "halo".equals(item.id);
+        boolean glow = item.glow || "halo".equals(item.modelId());
         if (glow) {
             GlStateManager.disableLighting();
             GlStateManager.translate(0f, (float) Math.sin(age * 0.1f) * 0.02f, 0f);
         }
-        model.renderHat(item.id, 0.0625f);
+        model.renderHat(item.modelId(), 0.0625f);
         if (glow) GlStateManager.enableLighting();
         GlStateManager.popMatrix();
     }
