@@ -76,6 +76,7 @@ public final class Config {
                     String key = t.name().toLowerCase();
                     if (c.has(key)) Cosmetics.select(t, Cosmetics.find(t, c.get(key).getAsString()));
                 }
+                if (c.has("animate")) Cosmetics.animate = c.get("animate").getAsBoolean();
             }
 
             if (root.has("online")) {
@@ -141,6 +142,7 @@ public final class Config {
                 Cosmetics.Item i = Cosmetics.selected(t);
                 cos.addProperty(t.name().toLowerCase(), i == null ? "none" : i.id);
             }
+            cos.addProperty("animate", Cosmetics.animate);
             root.add("cosmetics", cos);
 
             JsonObject on = new JsonObject();

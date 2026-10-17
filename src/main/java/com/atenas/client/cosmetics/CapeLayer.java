@@ -18,7 +18,7 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
         Minecraft mc = Minecraft.getMinecraft();
         if (p.isInvisible()) return;
         Cosmetics.Item item = Cosmetics.of(p, Cosmetics.Type.CAPE);
-        if (item == null) return;
+        if (item == null || !Cosmetics.inRange(p)) return;
 
         mc.getTextureManager().bindTexture(item.texture);
         GlStateManager.color(1f, 1f, 1f, 1f);
@@ -48,7 +48,21 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
         GlStateManager.rotate(sway / 2f, 0f, 0f, 1f);
         GlStateManager.rotate(-sway / 2f, 0f, 1f, 0f);
         GlStateManager.rotate(180f, 0f, 1f, 0f);
-        renderer.getMainModel().renderCape(0.0625f);
+        if (item.frames > 1) {
+            // Capa animada: la textura es una tira vertical; se corre la UV al fotograma actual (matriz de textura).
+            int f = Cosmetics.frameOf(item);
+            GlStateManager.matrixMode(5890); // GL_TEXTURE
+            GlStateManager.pushMatrix();
+            GlStateManager.translate(0f, (float) f / item.frames, 0f);
+            GlStateManager.scale(1f, 1f / item.frames, 1f);
+            GlStateManager.matrixMode(5888); // GL_MODELVIEW
+            renderer.getMainModel().renderCape(0.0625f);
+            GlStateManager.matrixMode(5890);
+            GlStateManager.popMatrix();
+            GlStateManager.matrixMode(5888);
+        } else {
+            renderer.getMainModel().renderCape(0.0625f);
+        }
         GlStateManager.popMatrix();
     }
 

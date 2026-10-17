@@ -42,8 +42,11 @@ public final class Cosmetics {
         public final int color;
         public final ResourceLocation texture;
         public final ResourceLocation icon;
+        /** Fotogramas de una capa animada (la textura es una tira vertical de 'frames' imagenes). 1 = capa normal. */
+        public final int frames;
 
-        Item(Type type, String id, String name, int color) {
+        Item(Type type, String id, String name, int color, int frames) {
+            this.frames = frames;
             this.type = type;
             this.id = id;
             this.name = name;
@@ -54,6 +57,13 @@ public final class Cosmetics {
                     "textures/cosmetics/icons/" + type.key() + "_" + id + ".png");
         }
     }
+
+    /** Capas animadas encendidas (se puede apagar desde Cosmeticos; apagadas se ve el primer fotograma, sin coste). */
+    public static boolean animate = true;
+    /** Milisegundos por fotograma de las capas animadas (~11 fps). */
+    public static final int FRAME_MS = 90;
+    /** Los cosmeticos de otros jugadores solo se dibujan dentro de esta distancia (en bloques al cuadrado). */
+    public static final double MAX_DIST_SQ = 40.0 * 40.0;
 
     public static final List<Item> ALL = new ArrayList<Item>();
     private static final Map<Type, Item> SELECTED = new EnumMap<Type, Item>(Type.class);
@@ -74,6 +84,13 @@ public final class Cosmetics {
         add(Type.CAPE, "oro", "Oro", 0xFFE8B923);
         add(Type.CAPE, "noche", "Noche", 0xFF2B2F6B);
         add(Type.CAPE, "creeper", "Creeper", 0xFF4CAF50);
+        // Capas animadas: una sola textura con los fotogramas en vertical; solo se desplaza la UV (sin coste extra)
+        addAnim(Type.CAPE, "llamas", "Llamas (anim)", 0xFFFF6A00, 12);
+        addAnim(Type.CAPE, "aurora", "Aurora (anim)", 0xFF35E0A8, 12);
+        addAnim(Type.CAPE, "cosmos", "Cosmos (anim)", 0xFF7B4DFF, 12);
+        addAnim(Type.CAPE, "lluvia", "Lluvia Matrix (anim)", 0xFF22DD66, 16);
+        addAnim(Type.CAPE, "mareas", "Mareas (anim)", 0xFF1E9FE8, 12);
+        addAnim(Type.CAPE, "pulso", "Pulso Ne\u00f3n (anim)", 0xFFEC4899, 12);
         // Alas
         add(Type.WINGS, "doradas", "Alas Doradas", 0xFFF5C542);
         add(Type.WINGS, "oscuras", "Alas Oscuras", 0xFF8E2DE2);
@@ -100,7 +117,23 @@ public final class Cosmetics {
     private Cosmetics() {}
 
     private static void add(Type t, String id, String name, int color) {
-        ALL.add(new Item(t, id, name, color));
+        ALL.add(new Item(t, id, name, color, 1));
+    }
+
+    private static void addAnim(Type t, String id, String name, int color, int frames) {
+        ALL.add(new Item(t, id, name, color, frames));
+    }
+
+    /** True si este jugador es lo bastante cercano como para dibujarle cosmeticos (el tuyo siempre). */
+    public static boolean inRange(AbstractClientPlayer p) {
+        Minecraft mc = Minecraft.getMinecraft();
+        return p == mc.thePlayer || mc.thePlayer == null || p.getDistanceSqToEntity(mc.thePlayer) <= MAX_DIST_SQ;
+    }
+
+    /** Fotograma actual de una capa animada (0 si esta apagado). */
+    public static int frameOf(Item item) {
+        if (item.frames <= 1 || !animate) return 0;
+        return (int) ((Minecraft.getSystemTime() / FRAME_MS) % item.frames);
     }
 
     public static Item selected(Type t) { return SELECTED.get(t); }

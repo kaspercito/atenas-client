@@ -568,6 +568,11 @@ public class AtenasMenu extends GuiScreen {
         } else {
             Draw.text("Solo local", bx + 8, top + 8, Theme.DIM);
         }
+        Draw.text("Animadas", bx + 8, top + 30, Theme.TEXT);
+        Draw.toggle(bx + prevW - 30, top + 29, Cosmetics.animate);
+        hits.add(new Hit(bx, top + 22, prevW, 22, new Runnable() {
+            @Override public void run() { Cosmetics.animate = !Cosmetics.animate; Config.save(); }
+        }));
         if (mc.thePlayer != null) {
             drawPlayer(bx + prevW / 2, top + listH - 14, Math.max(30, Math.min(70, listH / 3)));
         } else {
