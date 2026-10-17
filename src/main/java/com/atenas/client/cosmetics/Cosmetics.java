@@ -4,6 +4,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import com.atenas.client.core.Config;
@@ -12,6 +13,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.AbstractClientPlayer;
 import net.minecraft.client.renderer.entity.RenderPlayer;
 import net.minecraft.client.renderer.entity.RendererLivingEntity;
+import net.minecraft.client.renderer.entity.layers.LayerCape;
 import net.minecraft.client.renderer.entity.layers.LayerRenderer;
 import net.minecraft.util.ResourceLocation;
 
@@ -28,6 +30,9 @@ public final class Cosmetics {
             this.label = label;
             this.folder = folder;
         }
+
+        /** cape / wings / hat (nombre del icono). */
+        public String key() { return name().toLowerCase(Locale.ROOT); }
     }
 
     public static final class Item {
@@ -36,6 +41,7 @@ public final class Cosmetics {
         public final Type type;
         public final int color;
         public final ResourceLocation texture;
+        public final ResourceLocation icon;
 
         Item(Type type, String id, String name, int color) {
             this.type = type;
@@ -44,6 +50,8 @@ public final class Cosmetics {
             this.color = color;
             this.texture = new ResourceLocation("atenasclient",
                     "textures/cosmetics/" + type.folder + "/" + id + ".png");
+            this.icon = new ResourceLocation("atenasclient",
+                    "textures/cosmetics/icons/" + type.key() + "_" + id + ".png");
         }
     }
 
@@ -131,12 +139,31 @@ public final class Cosmetics {
             add.setAccessible(true);
             Map<String, RenderPlayer> skins = Minecraft.getMinecraft().getRenderManager().getSkinMap();
             for (RenderPlayer rp : skins.values()) {
+                guardVanillaCape(rp);
                 add.invoke(rp, new CapeLayer(rp));
                 add.invoke(rp, new WingsLayer(rp));
                 add.invoke(rp, new HatLayer(rp));
             }
         } catch (Exception e) {
             System.err.println("[AtenasClient] No se pudieron registrar los cosmeticos: " + e);
+        }
+    }
+
+    /** Si llevas una capa de Atenas, la de Mojang no se dibuja. Busca la lista de capas por tipo, no por nombre. */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static void guardVanillaCape(RenderPlayer rp) {
+        try {
+            for (java.lang.reflect.Field f : RendererLivingEntity.class.getDeclaredFields()) {
+                if (!List.class.isAssignableFrom(f.getType())) continue;
+                f.setAccessible(true);
+                List layers = (List) f.get(rp);
+                for (int i = 0; i < layers.size(); i++) {
+                    if (layers.get(i) instanceof LayerCape) layers.set(i, new VanillaCapeGuard((LayerRenderer) layers.get(i)));
+                }
+                return;
+            }
+        } catch (Exception e) {
+            System.err.println("[AtenasClient] capa vanilla: " + e);
         }
     }
 }

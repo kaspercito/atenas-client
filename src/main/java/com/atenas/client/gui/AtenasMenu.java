@@ -82,7 +82,7 @@ public class AtenasMenu extends GuiScreen {
     private GuiTextField search;
     private Module.Category filter;      // null = todos
     private boolean settingsOpen;
-    private Cosmetics.Type cosFilter;     // null = todos
+    private Cosmetics.Type cosFilter = Cosmetics.Type.CAPE;  // pestana activa
     private final List<GuiTextField> atFields = new ArrayList<GuiTextField>();
     private int atCapturing = -1;
     private boolean atDirty = true;
@@ -582,62 +582,59 @@ public class AtenasMenu extends GuiScreen {
 
         int lx = bx + prevW + 8, lw = bw - prevW - 8;
 
-        // filtro por tipo
+        // pestanas: Capas / Alas / Sombreros
+        if (cosFilter == null) cosFilter = Cosmetics.Type.CAPE;
         int fcx = lx;
-        List<Cosmetics.Type> chips = new ArrayList<Cosmetics.Type>();
-        chips.add(null);
-        for (Cosmetics.Type t : Cosmetics.Type.values()) chips.add(t);
-        for (final Cosmetics.Type t : chips) {
-            String label = t == null ? "Todo" : t.label;
-            int w = Draw.width(label) + 16;
+        for (final Cosmetics.Type t : Cosmetics.Type.values()) {
+            int w = Draw.width(t.label) + 18;
             if (fcx + w > lx + lw) break;
             boolean on = t == cosFilter;
-            boolean hov = Draw.inside(mx, my, fcx, top, w, 15);
-            Draw.card(fcx, top, w, 15, on ? Theme.PANEL2 : hov ? Theme.HOVER : Theme.PANEL, on ? Theme.ACCENT : Theme.BORDER);
-            Draw.text(label, fcx + 8, top + 4, on ? Theme.TEXT : Theme.DIM);
-            hits.add(new Hit(fcx, top, w, 15, new Runnable() { @Override public void run() { cosFilter = t; scrollCos = 0; } }));
+            boolean hov = Draw.inside(mx, my, fcx, top, w, 16);
+            Draw.card(fcx, top, w, 16, on ? Theme.PANEL2 : hov ? Theme.HOVER : Theme.PANEL, on ? Theme.ACCENT : Theme.BORDER);
+            Draw.text(t.label, fcx + 9, top + 4, on ? Theme.TEXT : Theme.DIM);
+            hits.add(new Hit(fcx, top, w, 16, new Runnable() { @Override public void run() { cosFilter = t; scrollCos = 0; } }));
             fcx += w + 4;
         }
-        final int ctop = top + 19;
-        final int clistH = listH - 19;
 
-        List<CRow> rows = new ArrayList<CRow>();
-        for (Cosmetics.Type t : Cosmetics.Type.values()) {
-            if (cosFilter != null && t != cosFilter) continue;
-            if (cosFilter == null) rows.add(new CRow(t, null, true));
-            rows.add(new CRow(t, null, false));
-            for (Cosmetics.Item i : Cosmetics.ALL) if (i.type == t) rows.add(new CRow(t, i, false));
-        }
-        int total = 0;
-        for (CRow r : rows) total += r.header ? 16 : 17;
-        scrollCos = Math.max(0, Math.min(scrollCos, Math.max(0, total - clistH)));
+        // cuadricula de tarjetas con icono (como en el mod de 1.20.1)
+        final int gtop = top + 21;
+        final int gh = listH - 21;
+        final int cw = 62, ch = 58, gap = 6;
+        final int cols = Math.max(1, (lw - 8 + gap) / (cw + gap));
+        final int gx = lx + 4 + Math.max(0, (lw - 8 - (cols * cw + (cols - 1) * gap)) / 2);
+        final Cosmetics.Type ty = cosFilter;
 
-        Draw.card(lx, ctop, lw, clistH, Theme.PANEL, Theme.BORDER);
-        Draw.scissor(lx, ctop, lw, clistH);
-        int y = ctop - scrollCos;
-        for (final CRow r : rows) {
-            if (r.header) {
-                Draw.text(r.type.label.toUpperCase(Locale.ROOT), lx + 8, y + 6, Theme.ACCENT_DIM);
-                y += 16;
-                continue;
+        List<Cosmetics.Item> entries = new ArrayList<Cosmetics.Item>();
+        entries.add(null); // "Ninguno"
+        for (Cosmetics.Item i : Cosmetics.ALL) if (i.type == ty) entries.add(i);
+        int rowsN = (entries.size() + cols - 1) / cols;
+        int total = rowsN * (ch + gap) + 4;
+        scrollCos = Math.max(0, Math.min(scrollCos, Math.max(0, total - gh)));
+
+        Draw.card(lx, gtop, lw, gh, Theme.PANEL, Theme.BORDER);
+        Draw.scissor(lx + 1, gtop + 1, lw - 2, gh - 2);
+        Cosmetics.Item cur = Cosmetics.selected(ty);
+        for (int i = 0; i < entries.size(); i++) {
+            final Cosmetics.Item it = entries.get(i);
+            int x = gx + (i % cols) * (cw + gap);
+            int y = gtop + 4 + (i / cols) * (ch + gap) - scrollCos;
+            if (y + ch < gtop || y > gtop + gh) continue;
+            boolean on = it == cur;
+            boolean hov = Draw.inside(mx, my, x, y, cw, ch) && my >= gtop && my < gtop + gh;
+            Draw.card(x, y, cw, ch, on || hov ? Theme.PANEL2 : Theme.HOVER, on ? Theme.ACCENT : hov ? Theme.ACCENT_DIM : Theme.BORDER);
+            if (it == null) {
+                Draw.centered("\u2715", x + cw / 2, y + 16, Theme.DIM);
+            } else {
+                mc.getTextureManager().bindTexture(it.icon);
+                GlStateManager.enableBlend();
+                GlStateManager.color(1f, 1f, 1f, 1f);
+                net.minecraft.client.gui.Gui.drawModalRectWithCustomSizedTexture(x + (cw - 32) / 2, y + 6, 0f, 0f, 32, 32, 32f, 32f);
             }
-            Cosmetics.Item cur = Cosmetics.selected(r.type);
-            boolean on = (r.item == null) ? cur == null : cur == r.item;
-            boolean hov = Draw.inside(mx, my, lx, y, lw, 17) && my >= ctop && my < ctop + clistH;
-            if (on) {
-                Draw.rect(lx, y, lw, 17, Theme.PANEL2);
-                Draw.rect(lx, y, 2, 17, Theme.VIOLET);
-            } else if (hov) {
-                Draw.rect(lx, y, lw, 17, Theme.HOVER);
-            }
-            if (r.item != null) Draw.rect(lx + 10, y + 4, 9, 9, r.item.color);
-            else Draw.border(lx + 10, y + 4, 9, 9, Theme.OFF);
-            Draw.text(Draw.fit(r.item == null ? "Ninguno" : r.item.name, lw - 50), lx + 25, y + 5, on ? Theme.TEXT : Theme.DIM);
-            if (on) Draw.text("\u2713", lx + lw - 16, y + 5, Theme.ACCENT);
-            addClipped(lx, y, lw, 17, ctop, ctop + clistH, new Runnable() {
-                @Override public void run() { Cosmetics.select(r.type, r.item); }
+            Draw.centered(Draw.fit(it == null ? "Ninguno" : it.name, cw - 4), x + cw / 2, y + ch - 14, on ? Theme.TEXT : Theme.DIM);
+            if (on) Draw.rect(x + cw - 9, y + 3, 6, 6, Theme.ACCENT);
+            addClipped(x, y, cw, ch, gtop, gtop + gh, new Runnable() {
+                @Override public void run() { Cosmetics.select(ty, it); }
             });
-            y += 17;
         }
         Draw.endScissor();
     }
@@ -741,7 +738,7 @@ public class AtenasMenu extends GuiScreen {
             int step = d > 0 ? -17 : 17;
             if (tab == Tab.MODS && settingsOpen) scrollSet += step;
             else if (tab == Tab.MODS) scrollMods += step;
-            else if (tab == Tab.COSMETICS) scrollCos += step;
+            else if (tab == Tab.COSMETICS) scrollCos += step * 2;
         }
     }
 
