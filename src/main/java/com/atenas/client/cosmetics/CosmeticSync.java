@@ -54,6 +54,9 @@ public class CosmeticSync {
 
     public static void markDirty() { dirty = true; rev++; lastPush = 0; }
 
+    /** Pide ya lo que tienes elegido en el servicio (al abrir el menu de cosmeticos: un cambio hecho en el mod 1.20.1 aparece al instante). */
+    public static void refreshNow() { lastSelf = 0; }
+
     /** Cambiaste de cuenta: se baja lo que ESA cuenta tenia elegido en vez de subirle lo de la anterior. */
     public static void accountChanged() {
         dirty = false; selfKnown = false; lastSelf = 0; rev++;

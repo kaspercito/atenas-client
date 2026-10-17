@@ -552,7 +552,12 @@ public class AtenasMenu extends GuiScreen {
 
     // -------------------------------------------------------------- cosmetics
 
+    private long cosSeenAt;
+
     private void drawCosmetics(int mx, int my, int bx, int by, int bw, int bh) {
+        long nowCos = System.currentTimeMillis();
+        if (nowCos - cosSeenAt > 1500L) CosmeticSync.refreshNow(); // acaba de abrirse esta pesta\u00f1a
+        cosSeenAt = nowCos;
         Draw.scaled("Cosm\u00e9ticos", bx, by, 1.5f, Theme.TEXT, false);
         final int top = by + 20;
         final int listH = bh - 20;
