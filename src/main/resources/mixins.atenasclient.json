@@ -6,6 +6,8 @@
   "compatibilityLevel": "JAVA_8",
   "mixins": [],
   "client": [
+    "MixinEntity",
+    "MixinEntityRenderer",
     "MixinItemRenderer",
     "MixinMinecraft"
   ],

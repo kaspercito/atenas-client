@@ -84,7 +84,10 @@ public final class SocialClient {
     private static volatile String status = "loading"; // loading | ok | error | noaccount | disabled
     private static volatile String error = "";
     private static final AtomicBoolean SYNC_BUSY = new AtomicBoolean(false);
-    private static long lastSync;
+    private static final AtomicBoolean POLL_BUSY = new AtomicBoolean(false);
+    /** Firma de la ultima consulta rapida (mensajes sin leer : ultimo mensaje : solicitudes). Si cambia, algo nuevo llego. */
+    private static volatile String lastPoll;
+    private static long lastSync, lastPollAt;
     private static boolean identityLoaded;
 
     private static final ExecutorService POOL = Executors.newSingleThreadExecutor(new ThreadFactory() {
@@ -165,7 +168,7 @@ public final class SocialClient {
     }
 
     /** POST al servicio. Lanza IOException con mensaje legible para el usuario. */
-    private static JsonObject post(String route, JsonObject body) throws IOException {
+    public static JsonObject post(String route, JsonObject body) throws IOException {
         loadIdentity();
         String name = myName();
         if (!validName(name)) throw new IOException("Tu nick no es valido para el servicio de amigos.");
@@ -280,12 +283,42 @@ public final class SocialClient {
 
     public static long sinceLastSync() { return System.currentTimeMillis() - lastSync; }
 
+    public static long sinceLastPoll() { return System.currentTimeMillis() - lastPollAt; }
+
+    /**
+     * Consulta rapida (/poll): el servicio responde con 2 lecturas pequenas en vez de bajar todo el estado. Se hace cada pocos
+     * segundos y solo si algo cambio (mensaje o solicitud nueva) se pide el estado completo con /sync, asi los avisos llegan casi
+     * al instante sin cargar al servicio. La primera vez solo guarda la firma. No bloquea.
+     */
+    public static void poll(final boolean inGame, final String server) {
+        if (!enabled || snap == null || !validName(myName())) return; // sin estado completo, el sync normal se encarga
+        if (!POLL_BUSY.compareAndSet(false, true)) return;
+        lastPollAt = System.currentTimeMillis();
+        final String who = myName();
+        POOL.execute(new Runnable() {
+            @Override public void run() {
+                try {
+                    JsonObject r = post("/poll", new JsonObject());
+                    if (!who.equals(myName())) return;
+                    String sig = str(r, "unread") + ":" + str(r, "last") + ":" + str(r, "incoming");
+                    boolean changed = lastPoll != null && !sig.equals(lastPoll);
+                    lastPoll = sig;
+                    if (changed) sync(inGame, server);
+                } catch (Exception ignored) { /* sin conexion: el ciclo normal reintenta */
+                } finally {
+                    POLL_BUSY.set(false);
+                }
+            }
+        });
+    }
+
     /** Cambio de cuenta dentro del juego: la lista de amigos y el chat eran de la otra persona; se pide todo de nuevo. */
     public static void onAccountChanged() {
         snap = null;
         status = "loading";
         error = "";
         lastSync = 0;
+        lastPoll = null;
     }
 
     private static void run(final Runnable r, final Callback<?> cb) {

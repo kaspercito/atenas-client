@@ -55,6 +55,7 @@ public final class ModuleManager {
         add(new PerformanceModule());
         // Utilidades
         add(new ZoomModule());
+        add(new PerspectiveModule());
         add(new FullbrightModule());
         add(new TimeModule());
         add(new ChatTimeModule());

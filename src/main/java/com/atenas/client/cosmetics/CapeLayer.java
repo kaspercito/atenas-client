@@ -9,6 +9,7 @@ import net.minecraft.util.MathHelper;
 
 public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
     private final RenderPlayer renderer;
+    private final CapeModel model = new CapeModel();
 
     public CapeLayer(RenderPlayer renderer) { this.renderer = renderer; }
 
@@ -23,8 +24,9 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
         mc.getTextureManager().bindTexture(item.texture);
         GlStateManager.color(1f, 1f, 1f, 1f);
         GlStateManager.pushMatrix();
-        // un poco mas atras que la capa normal, para tapar la de Mojang si existe
-        GlStateManager.translate(0f, 0f, 0.14f);
+        // un poco mas atras que la capa normal, para tapar la de Mojang si existe. Con alas puestas va por FUERA de ellas
+        // (mas lejos del cuerpo): si no, las plumas la tapaban y casi no se veia.
+        GlStateManager.translate(0f, 0f, Cosmetics.of(p, Cosmetics.Type.WINGS) != null ? 0.29f : 0.14f);
 
         double dx = p.prevChasingPosX + (p.chasingPosX - p.prevChasingPosX) * (double) pt
                 - (p.prevPosX + (p.posX - p.prevPosX) * (double) pt);
@@ -44,8 +46,12 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
                 + (p.distanceWalkedModified - p.prevDistanceWalkedModified) * pt) * 6f) * 32f * cam;
         if (p.isSneaking()) lift += 25f;
 
-        GlStateManager.rotate(6f + swing / 2f + lift, 1f, 0f, 0f);
-        GlStateManager.rotate(sway / 2f, 0f, 0f, 1f);
+        // La inclinacion total es la de siempre, pero solo 35 % la gira el cuerpo entero: el resto lo doblan las tiras de tela.
+        float tilt = swing / 2f + lift;
+        float bend = (float) Math.toRadians(tilt * 0.65f);
+        float amp = CapeWave.ampFor(swing); // quieta: respiro leve; corriendo: ondea fuerte
+        GlStateManager.rotate(6f + tilt * 0.35f, 1f, 0f, 0f);
+        GlStateManager.rotate(sway / 4f, 0f, 0f, 1f);
         GlStateManager.rotate(-sway / 2f, 0f, 1f, 0f);
         GlStateManager.rotate(180f, 0f, 1f, 0f);
         if (item.frames > 1) {
@@ -56,12 +62,12 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
             GlStateManager.translate(0f, (float) f / item.frames, 0f);
             GlStateManager.scale(1f, 1f / item.frames, 1f);
             GlStateManager.matrixMode(5888); // GL_MODELVIEW
-            renderer.getMainModel().renderCape(0.0625f);
+            model.renderChain(0.0625f, bend, amp, age, (float) Math.toRadians(sway / 4f));
             GlStateManager.matrixMode(5890);
             GlStateManager.popMatrix();
             GlStateManager.matrixMode(5888);
         } else {
-            renderer.getMainModel().renderCape(0.0625f);
+            model.renderChain(0.0625f, bend, amp, age, (float) Math.toRadians(sway / 4f));
         }
         GlStateManager.popMatrix();
     }

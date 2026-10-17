@@ -5,6 +5,7 @@ import com.atenas.client.gui.AtenasMenu;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiMainMenu;
+import net.minecraft.client.gui.GuiMultiplayer;
 import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
@@ -24,6 +25,9 @@ public class ClientEvents {
     public void onGuiOpen(GuiOpenEvent e) {
         if (e.gui != null && e.gui.getClass() == GuiMainMenu.class) {
             e.gui = new AtenasMainMenu();
+        } else if (e.gui != null && e.gui.getClass() == GuiMultiplayer.class) {
+            // el servidor de Atenas queda primero en la lista, con estrella
+            FeaturedServer.ensure();
         }
     }
 }

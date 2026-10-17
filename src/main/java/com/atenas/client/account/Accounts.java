@@ -228,7 +228,7 @@ public final class Accounts {
 
     private static void afterChange() {
         SocialClient.onAccountChanged();
-        CosmeticSync.markDirty();
+        CosmeticSync.accountChanged();
     }
 
     // ------------------------------------------------------------ utilidades

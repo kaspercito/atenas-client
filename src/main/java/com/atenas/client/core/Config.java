@@ -30,6 +30,8 @@ public final class Config {
 
     private Config() {}
 
+    public static boolean isLoading() { return loading; }
+
     private static File file() {
         return new File(new File(Minecraft.getMinecraft().mcDataDir, "config"), "atenasclient.json");
     }

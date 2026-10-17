@@ -3,6 +3,7 @@ package com.atenas.client.cosmetics;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -21,7 +22,7 @@ import net.minecraft.util.ResourceLocation;
 public final class Cosmetics {
 
     public enum Type {
-        CAPE("Capas", "capes"), WINGS("Alas", "wings"), HAT("Sombreros", "hats");
+        CAPE("Capas", "capes"), WINGS("Alas", "wings"), HAT("Sombreros", "hats"), PET("Mascotas", "pets");
 
         public final String label;
         public final String folder;
@@ -31,7 +32,7 @@ public final class Cosmetics {
             this.folder = folder;
         }
 
-        /** cape / wings / hat (nombre del icono). */
+        /** cape / wings / hat / pet (nombre del icono). */
         public String key() { return name().toLowerCase(Locale.ROOT); }
     }
 
@@ -111,6 +112,13 @@ public final class Cosmetics {
         add(Type.HAT, "auriculares", "Auriculares", 0xFF28283A);
         add(Type.HAT, "conejo", "Orejas de Conejo", 0xFFF2F2F7);
         add(Type.HAT, "gorra", "Gorra", 0xFF2447B8);
+        // Mascotas (el modelo se elige por id en PetModel: perro/dalmata = dog, husky, gato/gatonegro = cat, zorro = fox)
+        add(Type.PET, "perro", "Perro", 0xFFCD9654);
+        add(Type.PET, "husky", "Husky", 0xFF68707E);
+        add(Type.PET, "dalmata", "D\u00e1lmata", 0xFFF4F4F6);
+        add(Type.PET, "gato", "Gato", 0xFFE28E3E);
+        add(Type.PET, "gatonegro", "Gato negro", 0xFF24242E);
+        add(Type.PET, "zorro", "Zorro", 0xFFE87028);
         SELECTED.put(Type.CAPE, find(Type.CAPE, "atenas"));
     }
 
@@ -141,15 +149,55 @@ public final class Cosmetics {
     public static void select(Type t, Item i) {
         if (i == null) SELECTED.remove(t); else SELECTED.put(t, i);
         Config.save();
-        CosmeticSync.markDirty();
+        if (!Config.isLoading()) CosmeticSync.markDirty();
     }
 
-    /** Cosmetico de un jugador: el tuyo, o el que descargamos del servidor para los demas. */
+    /** Aplica lo que hay en el servicio para TI (otra version del juego lo cambio). No vuelve a subirlo. Devuelve true si cambio algo. */
+    public static boolean applyRemote(Type t, String id) {
+        if (id == null) return false;
+        Item cur = SELECTED.get(t);
+        if ("none".equals(id)) {
+            if (cur == null) return false;
+            SELECTED.remove(t);
+            return true;
+        }
+        Item next = find(t, id);
+        if (next == null || next == cur) return false;
+        SELECTED.put(t, next);
+        return true;
+    }
+
+    /** Lo que lleva puesto otro jugador, ya resuelto (se recalcula solo cuando llegan datos nuevos del servicio). */
+    private static final class Look {
+        final Item[] items = new Item[Type.values().length];
+        int stamp = -1;
+    }
+
+    /** Cache por jugador (clave = nick tal como lo devuelve getName(), cuyo hash ya viene calculado). Solo el hilo principal la toca. */
+    private static final Map<String, Look> LOOKS = new HashMap<String, Look>();
+
+    /** Cosmetico de un jugador: el tuyo, o el que descargamos del servidor para los demas (con cache: sin buscar ni crear texto cada cuadro). */
     public static Item of(AbstractClientPlayer p, Type t) {
         if (p == Minecraft.getMinecraft().thePlayer) return selected(t);
         if (!CosmeticSync.enabled) return null;
-        String id = CosmeticSync.get(p.getName(), t);
-        return id == null ? null : find(t, id);
+        String n = p.getName();
+        if (n == null) return null;
+        Look l = LOOKS.get(n);
+        if (l == null) {
+            if (LOOKS.size() > 256) LOOKS.clear();
+            l = new Look();
+            LOOKS.put(n, l);
+        }
+        int stamp = CosmeticSync.stamp();
+        if (l.stamp != stamp) {
+            String[] ids = CosmeticSync.idsOf(n);
+            for (Type ty : Type.values()) {
+                String id = ids == null || ty.ordinal() >= ids.length ? null : ids[ty.ordinal()];
+                l.items[ty.ordinal()] = id == null ? null : find(ty, id);
+            }
+            l.stamp = stamp;
+        }
+        return l.items[t.ordinal()];
     }
 
     public static Item find(Type t, String id) {
