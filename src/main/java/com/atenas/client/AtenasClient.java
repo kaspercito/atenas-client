@@ -39,6 +39,7 @@ public class AtenasClient {
 
     public static KeyBinding keyMenu;
     public static KeyBinding keyPerspective;
+    public static KeyBinding keyZoom;
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
@@ -46,6 +47,8 @@ public class AtenasClient {
         ClientRegistry.registerKeyBinding(keyMenu);
         keyPerspective = new KeyBinding("Perspective (mirar alrededor)", Keyboard.KEY_LMENU, NAME);
         ClientRegistry.registerKeyBinding(keyPerspective);
+        keyZoom = new KeyBinding("Zoom", Keyboard.KEY_C, NAME);
+        ClientRegistry.registerKeyBinding(keyZoom);
 
         ModuleManager.init();
         Config.load();
