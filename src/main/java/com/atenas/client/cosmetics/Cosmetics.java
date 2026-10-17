@@ -71,28 +71,16 @@ public final class Cosmetics {
 
     static {
         // Capas
-        add(Type.CAPE, "atenas", "Atenas", 0xFFF5C542);
-        add(Type.CAPE, "violeta", "Violeta Atenas", 0xFF8B5CF6);
-        add(Type.CAPE, "fuego", "Fuego", 0xFFFF6A00);
-        add(Type.CAPE, "hielo", "Hielo", 0xFF7FD6FF);
+        add(Type.CAPE, "atenas", "Atenas (Exclusiva)", 0xFFF5C542);
+        add(Type.CAPE, "atardecer", "Atardecer Lunar", 0xFFFF7A59);
+        add(Type.CAPE, "aurora", "Aurora", 0xFF35E0A8);
+        add(Type.CAPE, "sakura", "Sakura", 0xFFF8A9C8);
+        add(Type.CAPE, "oceano", "Oc\u00e9ano al Atardecer", 0xFF1E7FD8);
+        add(Type.CAPE, "bosque", "Bosque Brumoso", 0xFF4F8F72);
         add(Type.CAPE, "galaxia", "Galaxia", 0xFF7B4DFF);
-        add(Type.CAPE, "arcoiris", "Arco\u00edris", 0xFFFF55FF);
-        add(Type.CAPE, "esmeralda", "Esmeralda", 0xFF2ECC71);
-        add(Type.CAPE, "oceano", "Oc\u00e9ano", 0xFF1E7FD8);
-        add(Type.CAPE, "atardecer", "Atardecer", 0xFFFF7A59);
-        add(Type.CAPE, "matrix", "Matrix", 0xFF22DD66);
-        add(Type.CAPE, "neon", "Ne\u00f3n", 0xFF22D3EE);
-        add(Type.CAPE, "oro", "Oro", 0xFFE8B923);
-        add(Type.CAPE, "noche", "Noche", 0xFF2B2F6B);
-        add(Type.CAPE, "creeper", "Creeper", 0xFF4CAF50);
-        // Capas animadas: una sola textura con los fotogramas en vertical; solo se desplaza la UV (sin coste extra)
-        addAnim(Type.CAPE, "llamas", "Llamas (anim)", 0xFFFF6A00, 12);
-        addAnim(Type.CAPE, "aurora", "Aurora (anim)", 0xFF35E0A8, 12);
-        addAnim(Type.CAPE, "cosmos", "Cosmos (anim)", 0xFF7B4DFF, 12);
-        addAnim(Type.CAPE, "lluvia", "Lluvia Matrix (anim)", 0xFF22DD66, 16);
-        addAnim(Type.CAPE, "mareas", "Mareas (anim)", 0xFF1E9FE8, 12);
-        addAnim(Type.CAPE, "pulso", "Pulso Ne\u00f3n (anim)", 0xFFEC4899, 12);
-        // Alas
+        add(Type.CAPE, "lava", "Monta\u00f1a de Lava", 0xFFFF6A1A);
+        add(Type.CAPE, "hielo", "Cristal de Hielo", 0xFF7FD6FF);
+
         add(Type.WINGS, "doradas", "Alas Doradas", 0xFFF5C542);
         add(Type.WINGS, "oscuras", "Alas Oscuras", 0xFF8E2DE2);
         add(Type.WINGS, "angel", "Alas de \u00c1ngel", 0xFFEAF6FF);
@@ -101,6 +89,10 @@ public final class Cosmetics {
         add(Type.WINGS, "hielo", "Alas de Hielo", 0xFF9ADCFF);
         add(Type.WINGS, "neon", "Alas de Ne\u00f3n", 0xFF22D3EE);
         add(Type.WINGS, "esmeralda", "Alas Esmeralda", 0xFF2ECC71);
+        add(Type.WINGS, "ambar", "Alas \u00c1mbar", 0xFFFF7814);
+        add(Type.WINGS, "sakura", "Alas Sakura", 0xFFFFAACD);
+        add(Type.WINGS, "aurora", "Alas Aurora", 0xFF28E6AA);
+        add(Type.WINGS, "lunar", "Alas Lunares", 0xFF7896E6);
         add(Type.WINGS, "demonio", "Alas de Demonio", 0xFFC0182A);
         // Sombreros
         add(Type.HAT, "halo", "Halo", 0xFFFFE680);

@@ -151,9 +151,16 @@ public class CosmeticSync {
             String n = p.getName();
             if (n != null && !n.equalsIgnoreCase(self) && SocialClient.validName(n)) names.add(n.toLowerCase(Locale.ROOT));
         }
+        if (mc.getNetHandler() != null) { // tambien los de la lista TAB, para poner el logo aunque esten lejos
+            for (net.minecraft.client.network.NetworkPlayerInfo info : mc.getNetHandler().getPlayerInfoMap()) {
+                String n = info.getGameProfile().getName();
+                String low = n == null ? null : n.toLowerCase(Locale.ROOT);
+                if (low != null && !low.equalsIgnoreCase(self) && SocialClient.validName(n) && !names.contains(low)) names.add(low);
+            }
+        }
         if (names.isEmpty()) return;
         Collections.sort(names);
-        if (names.size() > 40) names = names.subList(0, 40);
+        if (names.size() > 80) names = names.subList(0, 80);
         final List<String> wanted = new ArrayList<String>(names);
         final String joined = wanted.toString();
         if ((joined.equals(lastNames) && now - lastFetch < 20000L) || !FETCH_BUSY.compareAndSet(false, true)) return;

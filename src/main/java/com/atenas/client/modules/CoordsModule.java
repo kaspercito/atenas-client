@@ -1,5 +1,7 @@
 package com.atenas.client.modules;
 
+import com.atenas.client.core.Lang;
+
 import com.atenas.client.core.HudModule;
 
 import net.minecraft.entity.player.EntityPlayer;
@@ -20,9 +22,13 @@ public class CoordsModule extends HudModule {
 
     private String line2() {
         EntityPlayer p = mc.thePlayer;
-        if (p == null) return "Norte";
-        String n = EnumFacing.fromAngle(p.rotationYaw).getName();
-        return Character.toUpperCase(n.charAt(0)) + n.substring(1);
+        if (p == null) return Lang.tr("Norte");
+        switch (EnumFacing.fromAngle(p.rotationYaw)) {
+            case SOUTH: return Lang.tr("Sur");
+            case EAST: return Lang.tr("Este");
+            case WEST: return Lang.tr("Oeste");
+            default: return Lang.tr("Norte");
+        }
     }
 
     @Override

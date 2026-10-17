@@ -12,6 +12,7 @@ import net.minecraft.client.gui.ScaledResolution;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.client.event.DrawBlockHighlightEvent;
 import net.minecraftforge.client.event.FOVUpdateEvent;
+import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderBlockOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
@@ -29,40 +30,56 @@ public final class ModuleManager {
 
     private ModuleManager() {}
 
+    /**
+     * Aqui se decide en que seccion va cada mod. Secciones del menu:
+     *  - HUD: paneles de informacion (FPS, ping, coordenadas, reloj, memoria, velocidad).
+     *  - PvP: lo que se usa peleando (mira, combo, alcance, CPS, teclas, armadura, pociones, sin fuego, resalte, movimiento).
+     *  - Animaciones: animaciones 1.7.   - Rendimiento: FPS.
+     *  - Chat: todo lo del chat (hora, copiar, sin fondo, animacion, atajos de texto).
+     *  - Utilidades: lo demas (perspectiva, fullbright, hora del mundo).
+     * El zoom ya no existe: lo trae OptiFine.
+     */
     public static void init() {
         MODULES.clear();
         // HUD
-        add(new FpsModule());
-        add(new CpsModule());
-        add(new PingModule());
-        add(new CoordsModule());
-        add(new ComboModule());
-        add(new ReachModule());
-        add(new ClockModule());
-        add(new MemoryModule());
-        add(new SpeedModule());
-        add(new KeystrokesModule());
-        add(new ArmorModule());
-        add(new PotionModule());
+        add(new FpsModule(), Module.Category.HUD);
+        add(new PingModule(), Module.Category.HUD);
+        add(new CoordsModule(), Module.Category.HUD);
+        add(new ClockModule(), Module.Category.HUD);
+        add(new MemoryModule(), Module.Category.HUD);
+        add(new SpeedModule(), Module.Category.HUD);
+        add(new DirectionModule(), Module.Category.HUD);
+        add(new ScoreboardModule(), Module.Category.HUD);
+        add(new TabListModule(), Module.Category.HUD);
         // PvP
-        add(new MovementModule());
-        add(new CrosshairModule());
-        add(new LowFireModule());
-        add(new BlockOverlayModule());
+        add(new CrosshairModule(), Module.Category.PVP);
+        add(new ComboModule(), Module.Category.PVP);
+        add(new ReachModule(), Module.Category.PVP);
+        add(new CpsModule(), Module.Category.PVP);
+        add(new KeystrokesModule(), Module.Category.PVP);
+        add(new ArmorModule(), Module.Category.PVP);
+        add(new PotionModule(), Module.Category.PVP);
+        add(new MovementModule(), Module.Category.PVP);
+        add(new LowFireModule(), Module.Category.PVP);
+        add(new BlockOverlayModule(), Module.Category.PVP);
         // Animaciones (estilo 1.7)
-        add(new OldAnimationsModule());
+        add(new OldAnimationsModule(), Module.Category.ANIM);
         // Rendimiento (estilo OptiFine)
-        add(new PerformanceModule());
+        add(new PerformanceModule(), Module.Category.PERF);
+        // Chat
+        add(new ChatModule(), Module.Category.CHAT);
+        add(new AutotextModule(), Module.Category.CHAT);
         // Utilidades
-        add(new ZoomModule());
-        add(new PerspectiveModule());
-        add(new FullbrightModule());
-        add(new TimeModule());
-        add(new ChatTimeModule());
-        add(new AutotextModule());
+        add(new PerspectiveModule(), Module.Category.UTIL);
+        add(new FullbrightModule(), Module.Category.UTIL);
+        add(new TimeModule(), Module.Category.UTIL);
+        add(new BadgeModule(), Module.Category.UTIL);
     }
 
-    private static void add(Module m) { MODULES.add(m); }
+    private static void add(Module m, Module.Category category) {
+        m.category = category;
+        MODULES.add(m);
+    }
 
     public static List<Module> all() { return Collections.unmodifiableList(MODULES); }
 
@@ -110,6 +127,11 @@ public final class ModuleManager {
     @SubscribeEvent
     public void onChat(ClientChatReceivedEvent e) {
         for (Module m : MODULES) if (m.isEnabled()) m.onChat(e);
+    }
+
+    @SubscribeEvent
+    public void onGuiMouse(GuiScreenEvent.MouseInputEvent.Pre e) {
+        for (Module m : MODULES) if (m.isEnabled()) m.onGuiMouse(e);
     }
 
     @SubscribeEvent

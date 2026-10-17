@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.lwjgl.input.Keyboard;
 
+import com.atenas.client.core.Lang;
 import com.atenas.client.core.Module;
 
 import net.minecraftforge.client.event.MouseEvent;
@@ -43,10 +44,10 @@ public class AutotextModule extends Module {
             if (b == 0) return "Clic izq.";
             if (b == 1) return "Clic der.";
             if (b == 2) return "Clic central";
-            return "Mouse " + (b + 1);
+            return Lang.t("Mouse ", "Mouse ") + (b + 1);
         }
         String n = Keyboard.getKeyName(key);
-        return n == null ? "Tecla " + key : n;
+        return n == null ? Lang.t("Tecla ", "Key ") + key : n;
     }
 
     private void fire(int code) {

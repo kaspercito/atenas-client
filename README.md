@@ -12,7 +12,13 @@ Cliente PvP propio para Minecraft 1.8.9, hecho como mod de Forge. Todo el codigo
 
 **Rendimiento (estilo OptiFine):** graficos rapidos, sin nubes, sin sombras de entidades, iluminacion simple, particulas minimas, distancia de render y limite de FPS. Devuelve tus ajustes al apagarlo.
 
-**Utilidades:** Zoom (mantener C, rueda = nivel, camara suave), Hora en el chat, Resalte de bloque, Memoria y Velocidad (HUD), Fullbright, Hora (fija la hora solo para ti), **Autotext** (tecla **o boton del mouse** -> mensaje/comando; se edita dentro del menu: Mods > Autotext > engranaje).
+**Chat:** un solo mod `Chat` con hora [HH:mm] en cada mensaje, copiar un mensaje con clic derecho (con o sin la hora), chat sin fondo y animacion suave al llegar un mensaje (duracion ajustable) y chat infinito (no borra los mensajes viejos; vanilla guarda solo 100). Aqui tambien esta **Autotext** (tecla **o boton del mouse** -> mensaje/comando; se edita dentro del menu: Mods > Autotext > engranaje).
+
+**Utilidades:** Perspective, Fullbright y Hora (fija la hora del mundo solo para ti). El Zoom se quito: lo trae OptiFine.
+
+**Secciones del menu:** HUD (FPS, Ping, Coordenadas, Reloj, Memoria, Velocidad), PvP (Mira, Combo, Alcance, CPS, Teclas, Armadura, Pociones, Movimiento, Sin Fuego, Resalte de bloque), Animaciones, Rendimiento, Chat y Utilidades. La seccion de cada mod se decide en un solo sitio: `ModuleManager.init()`.
+
+**Idioma:** todo el cliente (mods, ajustes, menus y menu principal) sale en el idioma del juego: espanol si el juego esta en espanol, ingles en cualquier otro idioma. Los textos nuevos se traducen en `core/Lang.java`.
 
 **Cosmeticos (se ven en tu personaje y, con el Worker, en los demas usuarios de Atenas):** 20 capas de tela segmentada (6 animadas), 9 alas de plumas con aleteo, 9 sombreros y 6 mascotas que te siguen (perro, husky, dalmata, gato, gato negro y zorro); son los mismos que en el mod de 1.20.1. Vista previa giratoria en el menu.
 
@@ -46,7 +52,7 @@ Camino mas facil y fiable:
 
 - Los cosmeticos de otros jugadores solo se ven si despliegas el Worker de `worker/` y pones su URL (ver COMPILAR.md). Un nick lo reclama quien lo registra primero (token por instalacion); sin cuentas de Mojang no se puede verificar mas.
 - **Animaciones 1.7 (Mixin):** `Animaciones 1.7` hace que el objeto se balancee al bloquear, comer/beber y tensar el arco en primera persona (`MixinItemRenderer`) ; el golpe lo dispara `OldAnimationsModule` (un clic = un balanceo, mantener clic sobre un bloque = balanceo continuo, tambien al comer y con el arco). `MixinMinecraft` solo se usa si activas "Picar el bloque de verdad". Siguen SIN incluir: la pose de espada en tercera persona, el color de golpe y el motion blur.
-- **OptiFine:** no se incluye ni se reescribe (su licencia no permite redistribuirlo y es de codigo cerrado). El launcher lo baja solo de optifine.net en el PC del jugador la primera vez que juega (o con el boton de Ajustes > OptiFine); si eso falla, queda el metodo manual. Con OptiFine cargado, el Zoom de Atenas se apaga solo (el de OptiFine tambien usa C) y el modulo Rendimiento no toca nada (OptiFine manda en los graficos). El launcher acepta el .jar aunque el navegador lo haya renombrado ("(1)", espacios, preview_), comprueba que de verdad sea OptiFine, lo busca solo en Descargas/Escritorio/Documentos al pulsar Jugar y quita cualquier otro OptiFine de la carpeta mods para que no haya dos.
+- **OptiFine:** no se incluye ni se reescribe (su licencia no permite redistribuirlo y es de codigo cerrado). El launcher lo baja solo de optifine.net en el PC del jugador la primera vez que juega (o con el boton de Ajustes > OptiFine); si eso falla, queda el metodo manual. Con OptiFine cargado, el modulo Rendimiento no toca nada (OptiFine manda en los graficos). El launcher acepta el .jar aunque el navegador lo haya renombrado ("(1)", espacios, preview_), comprueba que de verdad sea OptiFine, lo busca solo en Descargas/Escritorio/Documentos al pulsar Jugar y quita cualquier otro OptiFine de la carpeta mods para que no haya dos.
 - **Cosmeticos:** 14 capas, 9 alas y 9 sombreros (los nuevos se generan con `tools/gen_cosmetics.py`; no hace falta tocar el Worker, acepta cualquier id).
 - Mixin va empaquetado dentro del jar (ver `build.gradle`). Si el mixin no engancha, el juego arranca igual y el modulo no hace nada: revisa `logs/latest.log` buscando `[mixin]`.
 

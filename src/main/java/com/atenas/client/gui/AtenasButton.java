@@ -3,7 +3,7 @@ package com.atenas.client.gui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiButton;
 
-/** Boton futurista: panel oscuro, barra de acento que crece al pasar el mouse y esquinas marcadas. */
+/** Boton futurista: cristal oscuro con esquinas cortadas, borde de neon violeta->cian y brillo que sube al pasar el mouse. */
 public class AtenasButton extends GuiButton {
 
     private float glow; // 0..1 animado
@@ -18,16 +18,24 @@ public class AtenasButton extends GuiButton {
         hovered = mouseX >= xPosition && mouseY >= yPosition
                 && mouseX < xPosition + width && mouseY < yPosition + height;
         boolean on = hovered && enabled;
-        glow += ((on ? 1f : 0f) - glow) * 0.25f;
-        int x = xPosition, y = yPosition, w = width, h = height;
-        Draw.rect(x, y, w, h, enabled ? 0xE00F0D1D : 0xA0090812);
-        Draw.gradient(x, y, w, h, 0x00A78BFA, ((int) (0x38 * glow) << 24) | 0xA78BFA, false);
-        Draw.border(x, y, w, h, on ? Theme.ACCENT : Theme.BORDER);
-        int bar = 2 + (int) (glow * (w / 2 - 2));
-        Draw.rect(x, y + h - 1, bar, 1, Theme.ACCENT);
-        Draw.rect(x + w - bar, y, bar, 1, Theme.ACCENT);
-        Draw.rect(x, y, 2, h, on ? Theme.ACCENT : Theme.ACCENT_DIM);
-        int tc = !enabled ? Theme.OFF : on ? Theme.ACCENT : Theme.TEXT;
-        Draw.text(displayString, x + w / 2 - Draw.width(displayString) / 2 + (int) (glow * 2), y + (h - 8) / 2, tc);
+        glow += ((on ? 1f : 0f) - glow) * 0.22f;
+        int x = xPosition, y = yPosition, w = width, h = height, cut = h >= 18 ? 4 : 3;
+        Draw.chamfer(x, y, w, h, cut, enabled ? 0xE60D0B1E : 0xA0090812);
+        // brillo interior que sube desde abajo
+        Draw.gradient(x + cut, y + h / 2, w - 2 * cut, h / 2 - 1, 0x00A78BFA, ((int) (0x46 * glow) << 24) | 0x8B5CF6, true);
+        int edge = on ? Theme.ACCENT : (enabled ? 0xFF3A3466 : 0xFF241F3C);
+        Draw.chamferBorder(x, y, w, h, cut, edge);
+        // regla de neon abajo: crece desde el centro hacia los lados
+        int bar = (int) (glow * (w - 2 * cut));
+        if (bar > 0) {
+            Draw.gradient(x + w / 2 - bar / 2, y + h - 2, bar / 2 + 1, 2, 0x008B5CF6, Theme.VIOLET, false);
+            Draw.gradient(x + w / 2, y + h - 2, bar / 2, 2, Theme.CYAN, 0x0022D3EE, false);
+        }
+        // esquina brillante
+        Draw.rect(x + w - cut - 5, y, 5, 1, on ? Theme.CYAN : Theme.ACCENT_DIM);
+        Draw.rect(x + cut, y + h - 1, 5, 1, on ? Theme.PINK : Theme.ACCENT_DIM);
+        int tc = !enabled ? Theme.OFF : on ? 0xFFFFFFFF : Theme.TEXT;
+        int tw = Draw.headingWidth(displayString);
+        Draw.heading(displayString, x + (w - tw) / 2 + (int) (glow * 1.5f), y + (h - 8) / 2, tc);
     }
 }

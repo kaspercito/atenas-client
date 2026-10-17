@@ -2,6 +2,8 @@ package com.atenas.client.gui;
 
 import org.lwjgl.opengl.GL11;
 
+import com.atenas.client.core.Lang;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.ScaledResolution;
@@ -33,6 +35,31 @@ public final class Draw {
         rect(x, y, 1, h, color);
         rect(x + w - 1, y, 1, h, color);
     }
+
+    /** Rectangulo con las esquinas cortadas en diagonal ("cut" pixeles). */
+    public static void chamfer(int x, int y, int w, int h, int cut, int color) {
+        rect(x, y + cut, w, h - 2 * cut, color);
+        for (int i = 0; i < cut; i++) {
+            rect(x + cut - i, y + i, w - 2 * (cut - i), 1, color);
+            rect(x + cut - i, y + h - 1 - i, w - 2 * (cut - i), 1, color);
+        }
+    }
+
+    /** Contorno de 1 px de un rectangulo con esquinas cortadas. */
+    public static void chamferBorder(int x, int y, int w, int h, int cut, int color) {
+        rect(x + cut, y, w - 2 * cut, 1, color);
+        rect(x + cut, y + h - 1, w - 2 * cut, 1, color);
+        rect(x, y + cut, 1, h - 2 * cut, color);
+        rect(x + w - 1, y + cut, 1, h - 2 * cut, color);
+        for (int i = 0; i < cut; i++) {
+            rect(x + cut - 1 - i, y + i, 1, 1, color);
+            rect(x + w - cut + i, y + i, 1, 1, color);
+            rect(x + cut - 1 - i, y + h - 1 - i, 1, 1, color);
+            rect(x + w - cut + i, y + h - 1 - i, 1, 1, color);
+        }
+    }
+
+    public static int withAlpha(int rgb, float a) { return ((int) (255 * Math.max(0f, Math.min(1f, a))) << 24) | (rgb & 0xFFFFFF); }
 
     public static boolean inside(int mx, int my, int x, int y, int w, int h) {
         return mx >= x && mx < x + w && my >= y && my < y + h;
@@ -67,33 +94,56 @@ public final class Draw {
         GlStateManager.enableTexture2D();
     }
 
+    // Todo lo que se dibuja pasa por Lang.tr: el texto sale en el idioma del juego (ver Lang).
     public static void text(String s, int x, int y, int color) {
-        mc().fontRendererObj.drawStringWithShadow(s, x, y, color);
+        s = Lang.tr(s);
+        if (AtenasFont.ready()) AtenasFont.draw(s, x, y, color, true);
+        else mc().fontRendererObj.drawStringWithShadow(s, x, y, color);
     }
 
-    public static int width(String s) { return mc().fontRendererObj.getStringWidth(s); }
+    /** Titulo en mayusculas con letras separadas (look futurista). */
+    public static void heading(String s, int x, int y, int color) {
+        s = Lang.tr(s).toUpperCase();
+        int cx = x;
+        for (int i = 0; i < s.length(); i++) {
+            String ch = String.valueOf(s.charAt(i));
+            text(ch, cx, y, color);
+            cx += width(ch) + 1;
+        }
+    }
+
+    public static int headingWidth(String s) {
+        s = Lang.tr(s).toUpperCase();
+        int w = 0;
+        for (int i = 0; i < s.length(); i++) w += width(String.valueOf(s.charAt(i))) + 1;
+        return w;
+    }
+
+    public static int width(String s) {
+        s = Lang.tr(s);
+        return AtenasFont.ready() ? AtenasFont.width(s) : mc().fontRendererObj.getStringWidth(s);
+    }
 
     public static void centered(String s, int cx, int y, int color) {
         text(s, cx - width(s) / 2, y, color);
     }
 
     public static void scaled(String s, float x, float y, float scale, int color, boolean centered) {
+        s = Lang.tr(s);
         float w = width(s) * scale;
         GlStateManager.pushMatrix();
         GlStateManager.translate(centered ? x - w / 2f : x, y, 0f);
         GlStateManager.scale(scale, scale, 1f);
-        mc().fontRendererObj.drawStringWithShadow(s, 0, 0, color);
+        if (AtenasFont.ready()) AtenasFont.draw(s, 0, 0, color, true);
+        else mc().fontRendererObj.drawStringWithShadow(s, 0, 0, color);
         GlStateManager.popMatrix();
     }
 
     /** Rectangulo con las esquinas cortadas (look "tech"). */
     public static void card(int x, int y, int w, int h, int fill, int border) {
-        rect(x + 1, y, w - 2, h, fill);
-        rect(x, y + 1, w, h - 2, fill);
-        rect(x + 1, y, w - 2, 1, border);
-        rect(x + 1, y + h - 1, w - 2, 1, border);
-        rect(x, y + 1, 1, h - 2, border);
-        rect(x + w - 1, y + 1, 1, h - 2, border);
+        int cut = h >= 18 && w >= 18 ? 3 : 2;
+        chamfer(x, y, w, h, cut, fill);
+        chamferBorder(x, y, w, h, cut, border);
     }
 
     public static void toggle(int x, int y, boolean on) {
@@ -116,13 +166,26 @@ public final class Draw {
     /** Recorta con "..." si no cabe en w pixeles. */
     public static String fit(String s, int w) {
         net.minecraft.client.gui.FontRenderer f = mc().fontRendererObj;
-        if (f.getStringWidth(s) <= w) return s;
+        s = Lang.tr(s);
+        if (width(s) <= w) return s;
+        if (AtenasFont.ready()) return AtenasFont.trim(s, Math.max(0, w - width("..."))) + "...";
         return f.trimStringToWidth(s, Math.max(0, w - f.getStringWidth("..."))) + "...";
     }
 
     /** Parte el texto en lineas de w pixeles; si sobran lineas, la ultima termina en "...". */
     public static java.util.List<String> wrap(String s, int w, int maxLines) {
-        java.util.List<String> lines = mc().fontRendererObj.listFormattedStringToWidth(s, w);
+        java.util.List<String> lines = new java.util.ArrayList<String>();
+        if (AtenasFont.ready()) {
+            StringBuilder cur = new StringBuilder();
+            for (String word : Lang.tr(s).split(" ")) {
+                String test = cur.length() == 0 ? word : cur + " " + word;
+                if (cur.length() > 0 && width(test) > w) { lines.add(cur.toString()); cur = new StringBuilder(word); }
+                else cur = new StringBuilder(test);
+            }
+            if (cur.length() > 0) lines.add(cur.toString());
+        } else {
+            for (Object o : mc().fontRendererObj.listFormattedStringToWidth(Lang.tr(s), w)) lines.add((String) o);
+        }
         if (lines.size() <= maxLines) return lines;
         java.util.List<String> out = new java.util.ArrayList<String>(lines.subList(0, maxLines));
         out.set(maxLines - 1, fit(out.get(maxLines - 1) + "...", w));

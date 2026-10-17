@@ -6,6 +6,7 @@ import java.util.Random;
 import org.lwjgl.input.Keyboard;
 
 import com.atenas.client.AtenasClient;
+import com.atenas.client.core.Lang;
 import com.atenas.client.social.SocialClient;
 import com.atenas.client.social.SocialEvents;
 import com.atenas.client.social.SocialScreen;
@@ -17,7 +18,7 @@ import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiSelectWorld;
 
 /**
- * Menu principal de Atenas (oro sobre azul tinta): Un jugador, Multijugador, Opciones, Principal, Amigos, Cuenta y una X para cerrar.
+ * Menu principal de Atenas (oro sobre azul tinta): Un jugador, Multijugador, Opciones, Principal, Amigos, Cuenta y una X para cerrar. Un solo idioma, el del juego.
  * Todo se calcula desde {@link #layout()}: el bloque (logo + botones) queda centrado y se compacta solo en pantallas chicas.
  */
 public class AtenasMainMenu extends GuiScreen {
@@ -99,14 +100,14 @@ public class AtenasMainMenu extends GuiScreen {
         int bx = width / 2 - bw / 2;
         int y2 = btnY + 3 * (bh + gap) - gap + 8;
         int half = (bw - 6) / 2;
-        // Lo principal para jugar (espanol / ingles), el hub de Atenas aparte y la X para cerrar el cliente.
-        buttonList.add(new MenuButton(ID_SINGLE, bx, btnY, bw, bh, "Un jugador", "Singleplayer", false));
-        buttonList.add(new MenuButton(ID_MULTI, bx, btnY + (bh + gap), bw, bh, "Multijugador", "Multiplayer", false));
-        buttonList.add(new MenuButton(ID_OPTIONS, bx, btnY + 2 * (bh + gap), bw, bh, "Opciones", "Options", false));
-        buttonList.add(new MenuButton(ID_MODS, bx, y2, bw, sh, "Principal", "Mods y cosm\u00e9ticos", true));
-        friendsBtn = new MenuButton(ID_FRIENDS, bx, y2 + sh + 6, half, sh, "Amigos", "Shift+Tab", true);
+        // Un solo idioma: el del juego (ver Lang). Los tres botones grandes llevan solo su nombre; los chicos, una pista corta.
+        buttonList.add(new MenuButton(ID_SINGLE, bx, btnY, bw, bh, Lang.t("Un jugador", "Singleplayer"), null, false));
+        buttonList.add(new MenuButton(ID_MULTI, bx, btnY + (bh + gap), bw, bh, Lang.t("Multijugador", "Multiplayer"), null, false));
+        buttonList.add(new MenuButton(ID_OPTIONS, bx, btnY + 2 * (bh + gap), bw, bh, Lang.t("Opciones", "Options"), null, false));
+        buttonList.add(new MenuButton(ID_MODS, bx, y2, bw, sh, Lang.t("Principal", "Main"), Lang.t("Mods y cosm\u00e9ticos", "Mods & cosmetics"), true));
+        friendsBtn = new MenuButton(ID_FRIENDS, bx, y2 + sh + 6, half, sh, Lang.t("Amigos", "Friends"), "Shift+Tab", true);
         buttonList.add(friendsBtn);
-        buttonList.add(new MenuButton(ID_ACCOUNT, bx + half + 6, y2 + sh + 6, half, sh, "Cuenta", "Cambiar", true));
+        buttonList.add(new MenuButton(ID_ACCOUNT, bx + half + 6, y2 + sh + 6, half, sh, Lang.t("Cuenta", "Account"), Lang.t("Cambiar", "Switch"), true));
         buttonList.add(new CloseButton(ID_CLOSE, width - 32, 10, 22));
         SocialClient.sync(false, "");
         if (!readyAnnounced) {
@@ -202,7 +203,7 @@ public class AtenasMainMenu extends GuiScreen {
         Draw.rect(width / 2 - 8, subY + 11, 16, 3, Theme.VIOLET);
 
         // el texto de "Amigos" muestra cuantas solicitudes / mensajes nuevos hay
-        if (friendsBtn != null) friendsBtn.displayString = SocialEvents.badgeLabel("Amigos");
+        if (friendsBtn != null) friendsBtn.displayString = SocialEvents.badgeLabel(Lang.t("Amigos", "Friends"));
 
         super.drawScreen(mx, my, pt);
 
@@ -227,7 +228,7 @@ public class AtenasMainMenu extends GuiScreen {
             if (leftX + Draw.width(shortVer) + 8 <= chipLeft) { Draw.text(shortVer, leftX, fy, Theme.DIM); verEnd = leftX + Draw.width(shortVer); }
             else verEnd = leftX;
         }
-        String fr = SocialEvents.badgeLabel("Shift+Tab  \u00b7  Amigos y chat");
+        String fr = SocialEvents.badgeLabel(Lang.t("Shift+Tab  \u00b7  Amigos y chat", "Shift+Tab  \u00b7  Friends and chat"));
         int frW = Draw.width(fr), frX = width / 2 - frW / 2;
         if (frX > verEnd + 14 && frX + frW + 14 < chipLeft) Draw.text(fr, frX, fy, Theme.DIM);
     }
@@ -269,8 +270,8 @@ public class AtenasMainMenu extends GuiScreen {
         Draw.rect(chipX + 6, chipY + 4, 18, 18, Theme.VIOLET);
         if (user.length() > 0) Draw.centered(user.substring(0, 1).toUpperCase(), chipX + 15, chipY + 9, Theme.INK);
         Draw.text(user, chipX + 31, chipY + 4, over ? Theme.ACCENT : Theme.TEXT);
-        if (over) Draw.text("Cambiar de cuenta", chipX + 31, chipY + 14, Theme.VIOLET);
-        else Draw.text(online ? "\u25cf en l\u00ednea" : "\u25cb desconectado", chipX + 31, chipY + 14, online ? Theme.GREEN : Theme.DIM);
+        if (over) Draw.text(Lang.t("Cambiar de cuenta", "Switch account"), chipX + 31, chipY + 14, Theme.VIOLET);
+        else Draw.text(online ? Lang.t("\u25cf en l\u00ednea", "\u25cf online") : Lang.t("\u25cb desconectado", "\u25cb offline"), chipX + 31, chipY + 14, online ? Theme.GREEN : Theme.DIM);
         return chipX;
     }
 }

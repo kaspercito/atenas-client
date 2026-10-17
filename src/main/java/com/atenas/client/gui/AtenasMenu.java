@@ -12,6 +12,7 @@ import org.lwjgl.input.Mouse;
 import com.atenas.client.AtenasClient;
 import com.atenas.client.core.Config;
 import com.atenas.client.core.HudModule;
+import com.atenas.client.core.Lang;
 import com.atenas.client.core.Module;
 import com.atenas.client.core.ModuleManager;
 import com.atenas.client.core.Setting;
@@ -94,6 +95,7 @@ public class AtenasMenu extends GuiScreen {
             case PVP: return Theme.RED;
             case ANIM: return Theme.ACCENT;
             case PERF: return Theme.GREEN;
+            case CHAT: return Theme.VIOLET;
             default: return Theme.AMBER;
         }
     }
@@ -142,8 +144,8 @@ public class AtenasMenu extends GuiScreen {
         Draw.rect(x0 + 1, y0 + 2, SIDE - 1, ph - 3, Theme.SIDE);
         Draw.rect(x0 + SIDE, y0 + 2, 1, ph - 3, Theme.BORDER);
         Draw.logo(x0 + 10, y0 + 12, 28);
-        Draw.text("ATENAS", x0 + 44, y0 + 14, Theme.ACCENT);
-        Draw.text("CLIENT", x0 + 44, y0 + 25, Theme.DIM);
+        Draw.heading("ATENAS", x0 + 44, y0 + 14, Theme.ACCENT);
+        Draw.heading("CLIENT", x0 + 44, y0 + 25, Theme.DIM);
         String[] labels = {"Mods", "Cosm\u00e9ticos", "Editor HUD", SocialEvents.badgeLabel("Amigos"), "Acerca de"};
         int avail = ph - 50 - 28;
         int step = Math.max(17, Math.min(25, avail / labels.length));
@@ -200,7 +202,7 @@ public class AtenasMenu extends GuiScreen {
     private void drawMods(int mx, int my, int bx, int by, int bw, int bh) {
         if (settingsOpen && selected != null) {
             int top = by + 20;
-            Draw.text("Mods  \u203a  " + selected.name, bx, by + 4, Theme.ACCENT);
+            Draw.text("Mods  \u203a  " + Lang.tr(selected.name), bx, by + 4, Theme.ACCENT);
             smallButton("\u2190 Volver", bx + bw - 64, by, 64, mx, my, new Runnable() {
                 @Override public void run() { settingsOpen = false; atCapturing = -1; Config.save(); }
             });
@@ -245,7 +247,7 @@ public class AtenasMenu extends GuiScreen {
         List<Module> mods = new ArrayList<Module>();
         for (Module m : ModuleManager.all()) {
             if (filter != null && m.category != filter) continue;
-            if (!q.isEmpty() && !m.name.toLowerCase(Locale.ROOT).contains(q) && !m.description.toLowerCase(Locale.ROOT).contains(q)) continue;
+            if (!q.isEmpty() && !Lang.tr(m.name).toLowerCase(Locale.ROOT).contains(q) && !Lang.tr(m.description).toLowerCase(Locale.ROOT).contains(q)) continue;
             mods.add(m);
         }
         int cols = bw >= 540 ? 3 : bw >= 300 ? 2 : 1;
@@ -272,7 +274,7 @@ public class AtenasMenu extends GuiScreen {
             // icono: inicial en cuadro del color de la categoria
             Draw.rect(x + 8, y + 8, 22, 22, (0x40 << 24) | (col & 0xFFFFFF));
             Draw.border(x + 8, y + 8, 22, 22, col);
-            Draw.centered(m.name.substring(0, 1).toUpperCase(Locale.ROOT), x + 19, y + 15, Theme.TEXT);
+            Draw.centered(Lang.tr(m.name).substring(0, 1).toUpperCase(Locale.ROOT), x + 19, y + 15, Theme.TEXT);
             Draw.text(Draw.fit(m.name, cw - 36 - 34), x + 37, y + 9, Theme.TEXT);
             Draw.text(m.category.label, x + 37, y + 20, col);
             Draw.toggle(x + cw - 30, y + 8, on);
@@ -693,10 +695,9 @@ public class AtenasMenu extends GuiScreen {
         Draw.card(bx, top, bw, bh - 20, Theme.PANEL, Theme.BORDER);
         Draw.logo(bx + 14, top + 14, 56);
         Draw.scaled("Atenas Client", bx + 82, top + 18, 2f, Theme.TEXT, false);
-        Draw.text("Versi\u00f3n " + AtenasClient.VERSION + "  \u00b7  Minecraft 1.8.9 (Forge)", bx + 82, top + 40, Theme.DIM);
+        Draw.text(Lang.t("Versi\u00f3n ", "Version ") + AtenasClient.VERSION + "  \u00b7  Minecraft 1.8.9 (Forge)", bx + 82, top + 40, Theme.DIM);
         String[] info = {
             "RShift  \u2192  abrir / cerrar este men\u00fa   \u00b7   Shift+Tab  \u2192  amigos y chat",
-            "C (mantener)  \u2192  zoom",
             "Mods \u2192 elige un m\u00f3dulo para ver sus ajustes.",
             "Editor HUD \u2192 arrastra cada m\u00f3dulo y usa la rueda para su tama\u00f1o.",
             "Sin ventajas injustas: solo mejoras visuales y de utilidad."

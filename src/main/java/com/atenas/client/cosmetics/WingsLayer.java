@@ -18,6 +18,10 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
     private final WingMesh mesh = new WingMesh();
     private final TessSink sink = new TessSink();
 
+    /** Estado propio por jugador: la fase del aleteo avanza SIEMPRE y la mezcla suelo/aire es gradual (antes saltaba y se "reseteaba"). */
+    private static final class State { float air, phase; long last; }
+    private final java.util.Map<Integer, State> states = new java.util.HashMap<Integer, State>();
+
     public WingsLayer(RenderPlayer renderer) { this.renderer = renderer; }
 
     /** Entrega los vertices de la malla al WorldRenderer del Tessellator (formato posicion + textura + normal). */
@@ -45,13 +49,24 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         boolean twoSided = WingMesh.twoSidedFor(d2);
 
         mc.getTextureManager().bindTexture(item.texture);
-        // quietas con un respiro leve en el suelo; abiertas y aleteando en el aire
-        boolean air = !p.onGround && !p.isInWater() && p.ridingEntity == null;
-        float open = air ? 0.50f + (float) Math.sin(age * 0.55f) * 0.32f
-                         : 0.85f + (float) Math.sin(age * 0.07f) * 0.05f;
-        if (Cosmetics.of(p, Cosmetics.Type.CAPE) != null) open += 0.14f; // mas abiertas para que se vea la capa entre ellas
-        if (p.isSneaking()) open = 1.15f;
-        float flap = air ? 0.10f : 0f; // en el aire las plumas ondulan; en el suelo quedan quietas
+        boolean airNow = !p.onGround && !p.isInWater() && p.ridingEntity == null;
+        State st = states.get(p.getEntityId());
+        long now = System.nanoTime();
+        if (st == null) { if (states.size() > 200) states.clear(); st = new State(); st.last = now; states.put(p.getEntityId(), st); }
+        float dt = Math.min(0.1f, (now - st.last) / 1.0e9f) * 20f; // en ticks
+        st.last = now;
+        st.air += ((airNow ? 1f : 0f) - st.air) * Math.min(1f, dt * 0.25f); // 0 = suelo, 1 = aire, transicion suave
+        st.phase += dt * (0.35f + st.air * 0.65f);                          // nunca se detiene ni retrocede
+        float a = st.air;
+        float openGround = 0.85f + (float) Math.sin(st.phase * 0.2f) * 0.05f;
+        float openAir = 0.50f + (float) Math.sin(st.phase * 0.55f) * 0.32f;
+        float open = openGround * (1f - a) + openAir * a;
+        // Con capa: las alas nacen a los lados de la capa (outset) y se abren mas hacia los lados que hacia atras, asi no la tapan.
+        boolean cape = Cosmetics.of(p, Cosmetics.Type.CAPE) != null;
+        if (cape) open *= 0.72f;
+        mesh.outset = cape ? 5.5f : 0f;
+        if (p.isSneaking()) open = cape ? 0.9f : 1.15f;
+        float flap = 0.025f + 0.075f * a; // siempre ondulan un poco; mas en el aire
 
         GlStateManager.color(1f, 1f, 1f, 1f);
         GlStateManager.enableBlend();
@@ -64,7 +79,7 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         WorldRenderer wr = t.getWorldRenderer();
         wr.begin(7, DefaultVertexFormats.POSITION_TEX_NORMAL); // 7 = GL_QUADS
         sink.wr = wr;
-        mesh.emit(sink, open, age, flap, segs, twoSided, 0.0625f);
+        mesh.emit(sink, open, st.phase, flap, segs, twoSided, 0.0625f);
         sink.wr = null;
         t.draw();
 

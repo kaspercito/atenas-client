@@ -7,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraftforge.client.event.ClientChatReceivedEvent;
 import net.minecraftforge.client.event.DrawBlockHighlightEvent;
 import net.minecraftforge.client.event.FOVUpdateEvent;
+import net.minecraftforge.client.event.GuiScreenEvent;
 import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderBlockOverlayEvent;
 import net.minecraftforge.client.event.RenderGameOverlayEvent;
@@ -15,7 +16,7 @@ import net.minecraftforge.client.event.RenderHandEvent;
 public abstract class Module {
 
     public enum Category {
-        HUD("HUD"), PVP("PvP"), ANIM("Animaciones"), PERF("Rendimiento"), UTIL("Utilidades");
+        HUD("HUD"), PVP("PvP"), ANIM("Animaciones"), PERF("Rendimiento"), CHAT("Chat"), UTIL("Utilidades");
 
         public final String label;
 
@@ -24,7 +25,8 @@ public abstract class Module {
 
     public final String name;
     public final String description;
-    public final Category category;
+    /** Seccion del menu. La asigna cada mod; ModuleManager.init() es el unico sitio donde se decide en cual va cada uno. */
+    public Category category;
     public final List<Setting> settings = new ArrayList<Setting>();
     protected final Minecraft mc = Minecraft.getMinecraft();
     private boolean enabled;
@@ -61,6 +63,8 @@ public abstract class Module {
     public void onChat(ClientChatReceivedEvent event) {}
     public void onHighlight(DrawBlockHighlightEvent event) {}
     public void onMouse(MouseEvent event) {}
+    /** Clic o rueda dentro de una pantalla (chat, menus...). */
+    public void onGuiMouse(GuiScreenEvent.MouseInputEvent.Pre event) {}
 
     protected Setting addBool(String name, boolean def) {
         Setting s = Setting.bool(name, def);

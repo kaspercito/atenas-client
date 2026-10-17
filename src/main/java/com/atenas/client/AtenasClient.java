@@ -38,16 +38,13 @@ public class AtenasClient {
     }
 
     public static KeyBinding keyMenu;
-    public static KeyBinding keyZoom;
     public static KeyBinding keyPerspective;
 
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
         keyMenu = new KeyBinding("Abrir men\u00fa Atenas", Keyboard.KEY_RSHIFT, NAME);
-        keyZoom = new KeyBinding("Zoom", Keyboard.KEY_C, NAME);
         ClientRegistry.registerKeyBinding(keyMenu);
         keyPerspective = new KeyBinding("Perspective (mirar alrededor)", Keyboard.KEY_LMENU, NAME);
-        ClientRegistry.registerKeyBinding(keyZoom);
         ClientRegistry.registerKeyBinding(keyPerspective);
 
         ModuleManager.init();
@@ -61,6 +58,8 @@ public class AtenasClient {
         register(new CosmeticSync());
         register(new PetRender());
         register(new SocialEvents());
+        register(new com.atenas.client.social.Badge());
+        register(new com.atenas.client.modules.PerfEvents());
 
         Display.setTitle(NAME + " " + VERSION + " | Minecraft 1.8.9");
         setWindowIcon();

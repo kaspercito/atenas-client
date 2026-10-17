@@ -12,10 +12,11 @@ import net.minecraft.client.settings.GameSettings;
  * Guarda tus valores originales y los devuelve al apagar el modulo.
  */
 public class PerformanceModule extends Module {
-    private final Setting fast, noClouds, noShadows, flatLight, fewParticles, renderDist, maxFps;
+    private final Setting fast, noClouds, noShadows, flatLight, fewParticles, renderDist, maxFps, vbo, noVsync, cull, noViewBob;
     private boolean saved;
     private boolean oFancy, oShadows;
     private int oClouds, oAo, oParticles, oDist, oFps;
+    private boolean oVbo, oVsync, oBob;
 
     public PerformanceModule() {
         super("Rendimiento", "Más FPS: gráficos rápidos, sin nubes ni sombras y menos partículas. Devuelve tus ajustes al apagarlo. (Si usas OptiFine, él manda y este mod no hace nada.)", Category.PERF);
@@ -25,6 +26,10 @@ public class PerformanceModule extends Module {
         flatLight = addBool("Iluminación simple", false);
         fewParticles = addBool("Partículas mínimas", false);
         renderDist = addNum("Distancia de render (0 = la tuya)", 0, 0, 24, 1);
+        vbo = addBool("Usar VBO (más rápido)", true);
+        noVsync = addBool("Sin VSync", true);
+        cull = addNum("Ocultar mobs lejanos (bloques, 0 = no)", 48, 0, 128, 8);
+        noViewBob = addBool("Sin balanceo de cámara", false);
         maxFps = addNum("FPS máximos (260 = sin límite)", 260, 30, 260, 10);
     }
 
@@ -32,8 +37,11 @@ public class PerformanceModule extends Module {
         oFancy = g.fancyGraphics; oShadows = g.entityShadows;
         oClouds = g.clouds; oAo = g.ambientOcclusion; oParticles = g.particleSetting;
         oDist = g.renderDistanceChunks; oFps = g.limitFramerate;
+        oVbo = g.useVbo; oVsync = g.enableVsync; oBob = g.viewBobbing;
         saved = true;
     }
+
+    public int entityCullDistance() { return cull.getInt(); }
 
     @Override
     public void onEnable() { saved = false; }
@@ -55,6 +63,9 @@ public class PerformanceModule extends Module {
         if (d > 0 && g.renderDistanceChunks != d) g.renderDistanceChunks = d;
         if (d == 0 && g.renderDistanceChunks != oDist) g.renderDistanceChunks = oDist;
         g.limitFramerate = maxFps.getInt() >= 260 ? 260 : maxFps.getInt();
+        if (vbo.bool && !g.useVbo) { g.useVbo = true; reload = true; }
+        if (noVsync.bool && g.enableVsync) { g.enableVsync = false; org.lwjgl.opengl.Display.setVSyncEnabled(false); }
+        g.viewBobbing = noViewBob.bool ? false : oBob;
         if (reload && mc.renderGlobal != null) mc.renderGlobal.loadRenderers();
     }
 
@@ -65,6 +76,8 @@ public class PerformanceModule extends Module {
         g.fancyGraphics = oFancy; g.entityShadows = oShadows;
         g.clouds = oClouds; g.ambientOcclusion = oAo; g.particleSetting = oParticles;
         g.renderDistanceChunks = oDist; g.limitFramerate = oFps;
+        g.useVbo = oVbo; g.enableVsync = oVsync; g.viewBobbing = oBob;
+        org.lwjgl.opengl.Display.setVSyncEnabled(oVsync);
         saved = false;
         if (mc.renderGlobal != null) mc.renderGlobal.loadRenderers();
     }

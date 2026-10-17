@@ -123,7 +123,7 @@ public class SocialEvents {
     public void onPauseInit(GuiScreenEvent.InitGuiEvent.Post e) {
         if (!(e.gui instanceof GuiIngameMenu)) return;
         int w = 112;
-        e.buttonList.add(new AtenasButton(PAUSE_BUTTON_ID, 6, 6, w, 20, badgeLabel("Amigos")));
+        e.buttonList.add(new AtenasButton(PAUSE_BUTTON_ID, 6, 6, w, 20, badgeLabel(com.atenas.client.core.Lang.t("Amigos", "Friends"))));
     }
 
     @SubscribeEvent

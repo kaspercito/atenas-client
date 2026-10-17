@@ -7,6 +7,9 @@
   "mixins": [],
   "client": [
     "MixinEntity",
+    "MixinGuiNewChat",
+    "MixinGuiIngame",
+    "MixinGuiPlayerTabOverlay",
     "MixinEntityRenderer",
     "MixinItemRenderer",
     "MixinMinecraft"

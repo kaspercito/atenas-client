@@ -73,6 +73,20 @@ public class CrosshairModule extends Module {
         ScaledResolution sr = e.resolution;
         float dg = dynPrev + (dyn - dynPrev) * e.partialTicks;
         draw(sr.getScaledWidth() / 2, sr.getScaledHeight() / 2, sr.getScaleFactor(), Math.round(dg), 0);
+        restoreGui();
+    }
+
+    /**
+     * Gui.drawRect y el circulo dejan el GL "pintando" con el color de la mira (verde, rojo...). El juego sigue dibujando la
+     * vida, el hambre y la armadura con ese color puesto y salian teñidos. Aqui se deja todo como lo deja la mira de vanilla:
+     * color blanco, sin mezcla, textura de iconos puesta.
+     */
+    private void restoreGui() {
+        GL11.glLineWidth(1f);
+        GlStateManager.enableTexture2D();
+        GlStateManager.disableBlend();
+        GlStateManager.color(1f, 1f, 1f, 1f);
+        mc.getTextureManager().bindTexture(Gui.icons);
     }
 
     /**
@@ -113,6 +127,7 @@ public class CrosshairModule extends Module {
             if (outline.bool) Gui.drawRect(cx + dl - 1, cy + dl - 1, cx + dl + d + 1, cy + dl + d + 1, (c >>> 24) << 24);
             Gui.drawRect(cx + dl, cy + dl, cx + dl + d, cy + dl + d, c);
         }
+        GlStateManager.color(1f, 1f, 1f, 1f); // tambien la vista previa del menu: que no deje el color puesto
     }
 
     /** Marco cuadrado de "radio" r alrededor del centro. */
