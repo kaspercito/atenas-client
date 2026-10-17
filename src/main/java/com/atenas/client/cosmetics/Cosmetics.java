@@ -188,7 +188,7 @@ public final class Cosmetics {
         add(Type.PET, "gato", "Gato", 0xFFE28E3E);
         add(Type.PET, "gatonegro", "Gato negro", 0xFF24242E);
         add(Type.PET, "zorro", "Zorro", 0xFFE87028);
-        add(Type.PET, "catalina", "Catalina", 0xFFE9A15A);
+        add(Type.PET, "catalina", "Catalina", 0xFFF2F0EE);
         // Catalina es privada: hasta que el catalogo diga que tu nick esta en su lista, no aparece ni se puede elegir.
         find(Type.PET, "catalina").locked = true;
         SELECTED.put(Type.CAPE, find(Type.CAPE, "atenas"));
