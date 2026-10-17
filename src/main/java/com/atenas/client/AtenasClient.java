@@ -24,7 +24,7 @@ public class AtenasClient {
 
     public static final String MODID = "atenasclient";
     public static final String NAME = "Atenas Client";
-    public static final String VERSION = "1.5.0";
+    public static final String VERSION = "1.0.0";
 
     /** true si OptiFine esta cargado (se detecta por un campo que solo OptiFine agrega a GameSettings). */
     public static boolean hasOptiFine() {

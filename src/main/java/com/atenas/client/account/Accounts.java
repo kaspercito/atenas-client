@@ -41,6 +41,12 @@ public final class Accounts {
         public boolean offline() { return "offline".equals(kind); }
     }
 
+    /** Respuesta del launcher a un pedido. */
+    public static final class Result {
+        public boolean ok;
+        public String message = "";
+    }
+
     private Accounts() {}
 
     // ------------------------------------------------------------ rutas
@@ -137,6 +143,7 @@ public final class Accounts {
             return "No se pudo cambiar la cuenta dentro del juego. Cambiala en el launcher.";
         }
         afterChange();
+        try { if (launchedByLauncher()) request("add-offline", null, name); } catch (IOException ignored) { /* solo para que aparezca en la lista */ }
         return null;
     }
 
@@ -156,6 +163,66 @@ public final class Accounts {
             return null;
         } catch (IOException ex) {
             return "No se pudo avisar al launcher: " + ex.getMessage();
+        }
+    }
+
+    // ------------------------------------------------------------ pedidos al launcher
+
+    private static File requestFile() { return new File(configDir(), "account-request.json"); }
+    private static File resultFile() { return new File(configDir(), "account-result.json"); }
+
+    /** Marca de tiempo de accounts.json: cambia cuando el launcher agrega o quita una cuenta. */
+    public static long listStamp() {
+        File f = new File(configDir(), "accounts.json");
+        return f.isFile() ? f.lastModified() : 0L;
+    }
+
+    /**
+     * Deja un pedido para el launcher. action: add-microsoft | add-offline | remove.
+     * Devuelve el id del pedido (para pedir la respuesta con {@link #result}); lanza IOException con un mensaje listo para mostrar.
+     */
+    public static String request(String action, String target, String name) throws IOException {
+        if (!launchedByLauncher()) throw new IOException("Abre el juego desde el launcher para agregar o quitar cuentas.");
+        File dir = configDir();
+        if (!dir.isDirectory() && !dir.mkdirs()) throw new IOException("No se pudo escribir en la carpeta del launcher.");
+        String id = Long.toHexString(System.nanoTime()) + Long.toHexString(System.currentTimeMillis());
+        JsonObject o = new JsonObject();
+        o.addProperty("id", id);
+        o.addProperty("action", action);
+        if (target != null) o.addProperty("target", target);
+        if (name != null) o.addProperty("name", name);
+        o.addProperty("at", System.currentTimeMillis());
+        // se escribe en un archivo aparte y se renombra: el launcher nunca ve un archivo a medias
+        File tmp = new File(dir, "account-request.tmp");
+        OutputStream os = new FileOutputStream(tmp);
+        try { os.write(o.toString().getBytes("UTF-8")); } finally { os.close(); }
+        File dst = requestFile();
+        if (dst.exists() && !dst.delete()) throw new IOException("Hay otro pedido en curso. Espera un momento.");
+        if (!tmp.renameTo(dst)) throw new IOException("No se pudo avisar al launcher.");
+        return id;
+    }
+
+    /** true mientras el launcher todavia no tomo el pedido (si pasan unos segundos asi, el launcher no esta abierto). */
+    public static boolean requestQueued() { return requestFile().exists(); }
+
+    /** Retira el pedido si el launcher no llego a tomarlo. */
+    public static void cancelRequest() { requestFile().delete(); }
+
+    /** Respuesta del launcher a ese pedido, o null si todavia no hay. Nunca lanza. */
+    public static Result result(String id) {
+        File f = resultFile();
+        if (id == null || !f.isFile()) return null;
+        try {
+            JsonElement el = new JsonParser().parse(readAll(new FileInputStream(f)));
+            if (!el.isJsonObject()) return null;
+            JsonObject o = el.getAsJsonObject();
+            if (!id.equals(str(o, "id"))) return null;
+            Result r = new Result();
+            r.ok = o.has("ok") && o.get("ok").isJsonPrimitive() && o.get("ok").getAsBoolean();
+            r.message = str(o, "message");
+            return r;
+        } catch (Exception ignored) {
+            return null; // a medio escribir: se vuelve a mirar en el siguiente tick
         }
     }
 

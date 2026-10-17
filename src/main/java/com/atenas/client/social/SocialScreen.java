@@ -57,16 +57,25 @@ public class SocialScreen extends GuiScreen {
         y0 = (height - ph) / 2;
         String keepAdd = addField == null ? "" : addField.getText();
         String keepChat = chatField == null ? "" : chatField.getText();
-        addField = field(1, x0 + 8, y0 + 30, LIST_W - 40, 16, 16, "Nick de Minecraft");
+        // Cada campo usa EXACTAMENTE el rectangulo que dibuja drawList / drawChat (antes el del chat quedaba 10 px mas abajo y el texto salia de la caja)
+        addField = field(1, x0 + 8, y0 + 30, LIST_W - 32, 16, 16);
         addField.setText(keepAdd);
-        chatField = field(2, x0 + LIST_W + 18, y0 + ph - 24, pw - LIST_W - 70, 16, 300, "Escribe un mensaje...");
+        chatField = field(2, chatInputX(), chatInputY(), chatInputW(), 16, 300);
         chatField.setText(keepChat);
         chatField.setFocused(selected != null);
         if (SocialClient.snapshot() == null || SocialClient.sinceLastSync() > 3000) SocialClient.sync(mc.theWorld != null, "");
     }
 
-    private GuiTextField field(int id, int x, int y, int w, int h, int max, String hint) {
-        GuiTextField f = new GuiTextField(id, fontRendererObj, x + 3, y + 4, w - 6, h - 4);
+    // caja de escribir mensaje (la usan initGui y drawChat)
+    private int chatX() { return x0 + LIST_W + 16; }
+    private int chatW() { return pw - LIST_W - 24; }
+    private int chatInputX() { return chatX() + 6; }
+    private int chatInputY() { return y0 + 30 + (ph - 38) - 22; }
+    private int chatInputW() { return chatW() - 12 - 44; }
+
+    /** Campo de texto dentro de la caja (bx, by, bw, bh): sin fondo propio, con el texto centrado en vertical y 4 px de aire a los lados. */
+    private GuiTextField field(int id, int bx, int by, int bw, int bh, int max) {
+        GuiTextField f = new GuiTextField(id, fontRendererObj, bx + 4, by + (bh - 8) / 2, bw - 8, 8);
         f.setMaxStringLength(max);
         f.setEnableBackgroundDrawing(false);
         f.setCanLoseFocus(true);
@@ -122,14 +131,16 @@ public class SocialScreen extends GuiScreen {
                         loadingChat = false;
                         if (!key.equals(selected)) return;
                         if (err != null) { notice = err; noticeBad = true; noticeAt = System.currentTimeMillis(); return; }
-                        for (int i = msgs.size() - 1; i >= 0; i--) if (msgs.get(i).pending) msgs.remove(i);
+                        // los mensajes que se estan enviando (pending) se quedan: antes se borraban aqui y, si la respuesta del envio
+                        // llegaba despues, el mensaje desaparecia de la pantalla hasta volver a abrir el chat
+                        boolean added = false;
                         for (SocialClient.Msg m : list) {
                             boolean dup = false;
                             for (SocialClient.Msg o : msgs) if (o.id == m.id) { dup = true; break; }
-                            if (!dup) msgs.add(m);
+                            if (!dup) { msgs.add(m); added = true; }
                             if (m.id > lastId) lastId = m.id;
                         }
-                        if (!list.isEmpty()) scrollChat = 0;
+                        if (added) { sortMsgs(); scrollChat = 0; }
                     }
                 });
             }
@@ -137,6 +148,17 @@ public class SocialScreen extends GuiScreen {
     }
 
     private void pollChat() { loadChat(lastId); }
+
+    /** Por id; los que todavia no tienen id (recien enviados) van al final. */
+    private void sortMsgs() {
+        java.util.Collections.sort(msgs, new java.util.Comparator<SocialClient.Msg>() {
+            @Override public int compare(SocialClient.Msg a, SocialClient.Msg b) {
+                long x = a.id == 0 ? Long.MAX_VALUE : a.id, y = b.id == 0 ? Long.MAX_VALUE : b.id;
+                if (x != y) return x < y ? -1 : 1;
+                return a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0;
+            }
+        });
+    }
 
     private void sendChat() {
         final String text = chatField.getText().trim();
@@ -156,9 +178,14 @@ public class SocialScreen extends GuiScreen {
                     @Override public void run() {
                         if (err != null || m == null) { temp.pending = false; temp.failed = true; say(err, true); return; }
                         temp.pending = false;
-                        temp.id = m.id;
-                        temp.ts = m.ts;
-                        if (m.id > lastId) lastId = m.id;
+                        boolean dupe = false;
+                        for (SocialClient.Msg o : msgs) if (o != temp && o.id == m.id) { dupe = true; break; }
+                        if (dupe) msgs.remove(temp); // el sondeo ya trajo este mensaje desde el servidor
+                        else { temp.id = m.id; temp.ts = m.ts; }
+                        // lastId NO se sube aqui: si el amigo escribio justo antes, su mensaje tiene un id menor y no se pediria nunca.
+                        // El siguiente sondeo trae todo lo que falta, en orden.
+                        sortMsgs();
+                        pollTick = 45;
                     }
                 });
             }
@@ -354,7 +381,7 @@ public class SocialScreen extends GuiScreen {
     }
 
     private void drawChat(int mx, int my) {
-        int cx = x0 + LIST_W + 16, top = y0 + 30, cw = pw - LIST_W - 24, ch = ph - 38;
+        int cx = chatX(), top = y0 + 30, cw = chatW(), ch = ph - 38;
         Draw.rect(cx, top, cw, ch, Theme.PANEL);
         final SocialClient.Friend f = SocialClient.find(selected);
         if (f == null) {
@@ -410,10 +437,11 @@ public class SocialScreen extends GuiScreen {
         Draw.endScissor();
 
         // entrada
-        int iy = top + ch - 22;
-        Draw.rect(cx + 6, iy, cw - 12 - 44, 16, 0xFF090812);
-        Draw.border(cx + 6, iy, cw - 12 - 44, 16, chatField.isFocused() ? Theme.ACCENT : Theme.BORDER);
+        int iy = chatInputY(), ix = chatInputX(), iw = chatInputW();
+        Draw.rect(ix, iy, iw, 16, 0xFF090812);
+        Draw.border(ix, iy, iw, 16, chatField.isFocused() ? Theme.ACCENT : Theme.BORDER);
         chatField.drawTextBox();
+        if (chatField.getText().isEmpty() && !chatField.isFocused()) Draw.text("Escribe un mensaje...", ix + 4, iy + 4, Theme.OFF);
         smallBtn("Enviar", cx + cw - 46, iy + 1, 40, mx, my, Theme.ACCENT, new Runnable() { @Override public void run() { sendChat(); } });
         if (System.currentTimeMillis() - noticeAt < 5000 && !notice.isEmpty()) {
             Draw.centered(trim(notice, cw - 12), cx + cw / 2, iy - 11, noticeBad ? 0xFFFF7777 : 0xFF77FF99);
@@ -442,7 +470,8 @@ public class SocialScreen extends GuiScreen {
     protected void mouseClicked(int mx, int my, int button) throws IOException {
         super.mouseClicked(mx, my, button);
         addField.mouseClicked(mx, my, button);
-        chatField.mouseClicked(mx, my, button);
+        if (selected != null) chatField.mouseClicked(mx, my, button);
+        else chatField.setFocused(false);
         if (button != 0) return;
         for (int i = hits.size() - 1; i >= 0; i--) {
             Hit h = hits.get(i);
@@ -458,7 +487,7 @@ public class SocialScreen extends GuiScreen {
             return;
         }
         if (code == Keyboard.KEY_TAB) {
-            boolean toAdd = chatField.isFocused();
+            boolean toAdd = chatField.isFocused() || selected == null;
             addField.setFocused(toAdd);
             chatField.setFocused(!toAdd && selected != null);
             return;
@@ -466,7 +495,7 @@ public class SocialScreen extends GuiScreen {
         if (addField.isFocused()) {
             if (code == Keyboard.KEY_RETURN || code == Keyboard.KEY_NUMPADENTER) sendRequest();
             else addField.textboxKeyTyped(c, code);
-        } else if (chatField.isFocused()) {
+        } else if (selected != null && chatField.isFocused()) {
             if (code == Keyboard.KEY_RETURN || code == Keyboard.KEY_NUMPADENTER) sendChat();
             else chatField.textboxKeyTyped(c, code);
         }

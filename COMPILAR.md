@@ -49,7 +49,7 @@ Nota: Forge detecta mods del classpath, asi que deberia cargarlo; si en tu caso 
 ---------------------------------------------------------------------
 # YA CONECTADO AL LAUNCHER
 El Atenas Launcher (carpeta `atenas-launcher`) ya trae el perfil "Atenas Client 1.8.9": instala Java 8, Forge 1.8.9 y el jar de la ultima Release de este repo, y lo actualiza solo. Solo necesitas:
-1. Subir este proyecto a GitHub (repo PUBLICO; por defecto el launcher busca `kaspercito/AtenasClient`, se cambia en `launcher.config.json` > `clientPack.repo`).
+1. Subir este proyecto a GitHub (repo PUBLICO; por defecto el launcher busca `kaspercito/atenas-client`, se cambia en `launcher.config.json` > `clientPack.repo`).
 2. Publicar una version: `git tag v1.0.0 && git push origin v1.0.0` y esperar a que Actions termine (la Release debe traer `AtenasClient-1.0.0.jar`).
 3. Abrir el launcher, elegir "Atenas Client 1.8.9" y Jugar.
 Para probar un jar sin publicar: copialo a `%APPDATA%\Atenas Launcher\client-local\`.
