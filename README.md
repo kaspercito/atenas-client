@@ -14,7 +14,7 @@ Cliente PvP propio para Minecraft 1.8.9, hecho como mod de Forge. Todo el codigo
 
 **Utilidades:** Zoom (mantener C, rueda = nivel, camara suave), Hora en el chat, Resalte de bloque, Memoria y Velocidad (HUD), Fullbright, Hora (fija la hora solo para ti), **Autotext** (tecla **o boton del mouse** -> mensaje/comando; se edita dentro del menu: Mods > Autotext > engranaje).
 
-**Cosmeticos (se ven en tu personaje y, con el Worker, en los demas usuarios de Atenas):** 6 capas (Atenas, Fuego, Hielo, Galaxia, Arcoiris, Esmeralda), 3 alas animadas (Doradas, Oscuras, de Angel), 3 sombreros (Halo, Corona, Galera). Vista previa giratoria en el menu.
+**Cosmeticos (se ven en tu personaje y, con el Worker, en los demas usuarios de Atenas):** 14 capas (texturas HD), 9 alas de 7 plumas con aleteo y 9 sombreros (los mismos que en el mod de 1.20.1). Vista previa giratoria en el menu.
 
 **Interfaz:** menu principal futurista (Principal, Singleplayer, Multiplayer, Opciones y X para cerrar), Amigos y chat (Shift+Tab, menu principal y pausa) con solicitudes, estado en linea y avisos; menu principal de Atenas, menu del cliente (RShift) con ajustes por modulo, Editor HUD (arrastrar + rueda para tamano). Config en `.minecraft/config/atenasclient.json`.
 

@@ -21,18 +21,18 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         if (item == null) return;
 
         mc.getTextureManager().bindTexture(item.texture);
-        boolean air = !p.onGround;
-        float speed = air ? 0.55f : 0.12f;
-        float amp = air ? 22f : 5f;
-        float angle = 18f + (float) Math.sin(age * speed) * amp;
+        // quietas con un respiro leve en el suelo; abiertas y aleteando en el aire
+        boolean air = !p.onGround && !p.isInWater() && p.ridingEntity == null;
+        float open = air ? 0.45f + (float) Math.sin(age * 0.55f) * 0.30f
+                         : 0.95f + (float) Math.sin(age * 0.07f) * 0.06f;
+        if (p.isSneaking()) open = 1.15f;
 
         GlStateManager.color(1f, 1f, 1f, 1f);
         GlStateManager.enableBlend();
         GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
         GlStateManager.pushMatrix();
         if (p.isSneaking()) GlStateManager.rotate(28.6f, 1f, 0f, 0f);
-        GlStateManager.translate(0f, 0.02f, 0.14f);
-        model.renderWings(0.0625f, angle);
+        model.renderWings(0.0625f, open);
         GlStateManager.popMatrix();
         GlStateManager.disableBlend();
     }

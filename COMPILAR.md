@@ -17,7 +17,7 @@
 En la terminal, dentro de `C:\atenas-mdk`:
 1. `gradlew setupDecompWorkspace`   (tarda varios minutos y necesita internet; solo la primera vez)
 2. `gradlew build`
-3. El mod queda en `build\libs\AtenasClient-1.0.0.jar` (no uses el `-sources`).
+3. El mod queda en `build\libs\AtenasClient-1.0.1.jar` (no uses el `-sources`).
 
 Para probarlo sin instalar nada: `gradlew runClient` abre Minecraft con el mod.
 
@@ -39,7 +39,7 @@ Con Forge 1.8.9 instalado, copia el jar a la carpeta `mods` del perfil (`.minecr
 ## Instalar como VERSION (en vez de la carpeta mods)
 Requisitos: Forge 1.8.9 (11.15.1.2318) ya instalado y Node.js.
 1. Compila el jar (pasos de arriba).
-2. En la carpeta `version`: `node instalar-version.mjs ..\build\libs\AtenasClient-1.0.0.jar --perfil`
+2. En la carpeta `version`: `node instalar-version.mjs ..\build\libs\AtenasClient-1.0.1.jar --perfil`
    (`--mc "ruta\.minecraft"` si tu carpeta no es la normal; `--perfil` agrega el perfil al launcher oficial).
 3. Elige la version **AtenasClient-1.8.9** en el launcher.
 4. Si copiaste el jar a `mods`, borralo de ahi (si no, se carga dos veces).
@@ -50,7 +50,7 @@ Nota: Forge detecta mods del classpath, asi que deberia cargarlo; si en tu caso 
 # YA CONECTADO AL LAUNCHER
 El Atenas Launcher (carpeta `atenas-launcher`) ya trae el perfil "Atenas Client 1.8.9": instala Java 8, Forge 1.8.9 y el jar de la ultima Release de este repo, y lo actualiza solo. Solo necesitas:
 1. Subir este proyecto a GitHub (repo PUBLICO; por defecto el launcher busca `kaspercito/atenas-client`, se cambia en `launcher.config.json` > `clientPack.repo`).
-2. Publicar una version: `git tag v1.0.0 && git push origin v1.0.0` y esperar a que Actions termine (la Release debe traer `AtenasClient-1.0.0.jar`).
+2. Publicar una version: `git tag v1.0.1 && git push origin v1.0.1` y esperar a que Actions termine (la Release debe traer `AtenasClient-1.0.1.jar`).
 3. Abrir el launcher, elegir "Atenas Client 1.8.9" y Jugar.
 Para probar un jar sin publicar: copialo a `%APPDATA%\Atenas Launcher\client-local\`.
 (`launcher-integration/client-updater.js` queda como referencia; el launcher ya usa su propia version en `src/lib/client.js`.)
@@ -91,7 +91,7 @@ El jar necesita Forge 1.8.9 (11.15.1.2318) en la instancia. El launcher puede in
 1. Instalar Java 8 y compilar a mano UNA vez (`gradlew runClient`) para confirmar que abre y se ve bien.
 2. Si hay errores de compilacion, pasar el mensaje para corregirlo antes de publicar.
 3. Subir a GitHub, desplegar el Worker de cosmeticos y poner su URL en CosmeticSync.DEFAULT_URL.
-4. Publicar el tag v1.0.0 y comprobar que la Release trae el jar.
+4. Publicar el tag v1.0.1 y comprobar que la Release trae el jar.
 5. Integrar client-updater.js (o pasar el zip del launcher para que lo integre).
 
 ---------------------------------------------------------------------

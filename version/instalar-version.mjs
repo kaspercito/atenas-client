@@ -1,5 +1,5 @@
 // Crea la version "AtenasClient-1.8.9" en .minecraft/versions usando Forge 1.8.9 + el jar del mod.
-// Uso:  node instalar-version.mjs [ruta/al/AtenasClient-1.0.0.jar] [--mc "C:\ruta\.minecraft"] [--perfil]
+// Uso:  node instalar-version.mjs [ruta/al/AtenasClient-1.0.1.jar] [--mc "C:\ruta\.minecraft"] [--perfil]
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -16,12 +16,12 @@ function defaultMc() {
 
 const mc = opt("--mc") || defaultMc();
 const jarArg = args.find((a, i) => a.toLowerCase().endsWith(".jar") && args[i - 1] !== "--mc");
-const jar = jarArg || path.join("build", "libs", "AtenasClient-1.0.0.jar");
+const jar = jarArg || path.join("build", "libs", "AtenasClient-1.0.1.jar");
 const NEW_ID = "AtenasClient-1.8.9";
 
 function fail(msg) { console.error("\n[X] " + msg); process.exit(1); }
 
-if (!fs.existsSync(jar)) fail(`No encuentro el jar: ${jar}\n    Pasa la ruta: node instalar-version.mjs ruta\\AtenasClient-1.0.0.jar`);
+if (!fs.existsSync(jar)) fail(`No encuentro el jar: ${jar}\n    Pasa la ruta: node instalar-version.mjs ruta\\AtenasClient-1.0.1.jar`);
 const versionsDir = path.join(mc, "versions");
 if (!fs.existsSync(versionsDir)) fail(`No existe ${versionsDir}. Usa --mc "ruta\\.minecraft".`);
 
