@@ -69,6 +69,12 @@ public final class Faces {
         return ownSkin;
     }
 
+    /** Skin de esta cuenta (real si ya llego, si no la de Steve/Alex): para el maniqui de la vista previa fuera de partida. */
+    public static ResourceLocation skinOrDefault() {
+        ResourceLocation s = ownSkin();
+        return s != null ? s : ownDefaultSkin();
+    }
+
     private static boolean isSelf(String name) {
         try { return name != null && name.equalsIgnoreCase(Minecraft.getMinecraft().getSession().getUsername()); } catch (Throwable t) { return false; }
     }

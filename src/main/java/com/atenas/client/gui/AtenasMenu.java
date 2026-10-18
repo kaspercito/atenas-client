@@ -737,6 +737,12 @@ public class AtenasMenu extends GuiScreen {
                     net.minecraft.world.EnumDifficulty.PEACEFUL, mc.mcProfiler);
             mannequin = new net.minecraft.client.entity.EntityOtherPlayerMP(w, mc.getSession().getProfile()) {
                 @Override public int getBrightnessForRender(float pt) { return 15728880; } // sin mundo la luz seria 0
+                // Sin partida no hay "net handler": estos metodos lo consultan y daban NullPointerException (el jugador no se dibujaba)
+                @Override public boolean isSpectator() { return false; }
+                @Override public boolean hasPlayerInfo() { return false; }
+                @Override public String getSkinType() { return "default"; }
+                @Override public net.minecraft.util.ResourceLocation getLocationSkin() { return com.atenas.client.social.Faces.skinOrDefault(); }
+                @Override public net.minecraft.util.ResourceLocation getLocationCape() { return null; }
             };
             Cosmetics.previewPlayer = mannequin;
         } catch (Throwable t) {

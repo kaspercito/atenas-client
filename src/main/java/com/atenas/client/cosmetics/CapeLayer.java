@@ -31,7 +31,7 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
         // Pegada a la espalda (la de Mojang va a 0.125; esta a 0.135 para taparla sin separarse del cuerpo). Con alas puestas NO se
         // aleja: las alas son las que nacen detras de la capa (ver WingsLayer / WingMesh.zoff).
         if (p.isSneaking()) GlStateManager.translate(0f, 0.142f, -0.0178f); // igual que la capa de Mojang
-        GlStateManager.translate(0f, 0f, 0.19f); // un poco mas separada para que no se meta al cuerpo
+        GlStateManager.translate(0f, 0f, 0.17f); // un poco mas separada para que no se meta al cuerpo
 
         double dx = p.prevChasingPosX + (p.chasingPosX - p.prevChasingPosX) * (double) pt
                 - (p.prevPosX + (p.posX - p.prevPosX) * (double) pt);
@@ -54,8 +54,9 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
         // La inclinacion total es la de siempre, pero solo 35 % la gira el cuerpo entero: el resto lo doblan las tiras de tela.
         float tilt = swing / 2f + lift;
         float bend = (float) Math.toRadians(tilt * 0.65f);
+        float turn = MathHelper.clamp_float((p.renderYawOffset - p.prevRenderYawOffset) * 0.012f, -0.3f, 0.3f); // la tela se balancea al girar
         float amp = CapeWave.ampFor(swing); // quieta: respiro leve; corriendo: ondea fuerte
-        GlStateManager.rotate(Math.max(12f, 6f + tilt * 0.35f) + (p.isSneaking() ? 14f : 0f), 1f, 0f, 0f); // agachado: mas atras para librar la cadera
+        GlStateManager.rotate(Math.max(9f, 6f + tilt * 0.35f) + (p.isSneaking() ? 12f : 0f), 1f, 0f, 0f); // agachado: mas atras para librar la cadera
         GlStateManager.rotate(sway / 4f, 0f, 0f, 1f);
         GlStateManager.rotate(-sway / 2f, 0f, 1f, 0f);
         GlStateManager.rotate(180f, 0f, 1f, 0f);
@@ -67,12 +68,12 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
             GlStateManager.translate(0f, (float) f / item.frames, 0f);
             GlStateManager.scale(1f, 1f / item.frames, 1f);
             GlStateManager.matrixMode(5888); // GL_MODELVIEW
-            model.renderChain(0.0625f, bend, amp, age, (float) Math.toRadians(sway / 4f), far);
+            model.renderChain(0.0625f, bend, amp, age, (float) Math.toRadians(sway / 4f) + turn, far);
             GlStateManager.matrixMode(5890);
             GlStateManager.popMatrix();
             GlStateManager.matrixMode(5888);
         } else {
-            model.renderChain(0.0625f, bend, amp, age, (float) Math.toRadians(sway / 4f), far);
+            model.renderChain(0.0625f, bend, amp, age, (float) Math.toRadians(sway / 4f) + turn, far);
         }
         GlStateManager.popMatrix();
     }

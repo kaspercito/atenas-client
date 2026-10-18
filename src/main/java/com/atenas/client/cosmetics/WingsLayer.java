@@ -20,7 +20,7 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
     private final TessSink sink = new TessSink();
 
     /** Estado propio por jugador: la fase del aleteo avanza SIEMPRE y la mezcla suelo/aire es gradual (antes saltaba y se "reseteaba"). */
-    private static final class State { float air, phase; long last; }
+    private static final class State { float air, phase, spd, vy; long last; }
     private final java.util.Map<Integer, State> states = new java.util.HashMap<Integer, State>();
 
     public WingsLayer(RenderPlayer renderer) { this.renderer = renderer; }
@@ -57,21 +57,24 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         float dt = Math.min(0.1f, (now - st.last) / 1.0e9f) * 20f; // en ticks
         st.last = now;
         st.air += ((airNow ? 1f : 0f) - st.air) * Math.min(1f, dt * 0.25f); // 0 = suelo, 1 = aire, transicion suave
-        st.phase += dt * (0.35f + st.air * 0.65f);                          // nunca se detiene ni retrocede
+        float mvx = (float) (p.posX - p.prevPosX), mvz = (float) (p.posZ - p.prevPosZ);
+        st.spd += (Math.min(1f, (float) Math.sqrt(mvx * mvx + mvz * mvz) * 4f) - st.spd) * Math.min(1f, dt * 0.2f);   // 0 quieto .. 1 corriendo
+        st.vy += (Math.max(-1f, Math.min(1f, (float) (p.posY - p.prevPosY) * 2.5f)) - st.vy) * Math.min(1f, dt * 0.3f); // + sube, - cae
+        st.phase += dt * (0.35f + st.air * 0.65f + st.spd * 0.25f + Math.abs(st.vy) * 0.5f * st.air); // nunca se detiene ni retrocede
         float a = st.air;
-        float openGround = 0.85f + (float) Math.sin(st.phase * 0.2f) * 0.05f;
-        float openAir = 0.50f + (float) Math.sin(st.phase * 0.55f) * 0.32f;
+        float openGround = 0.85f + (float) Math.sin(st.phase * 0.2f) * 0.07f + (float) Math.sin(st.phase * 0.47f) * 0.025f - st.spd * 0.22f; // respiran y se recogen al correr
+        float openAir = 0.50f + (float) Math.sin(st.phase * 0.55f) * 0.32f - st.vy * 0.18f; // al caer se abren mas
         float open = openGround * (1f - a) + openAir * a;
         // Con capa: las alas nacen justo detras de la capa (zoff) y casi pegadas al centro (outset): no la tapan ni quedan separadas.
         boolean cape = Cosmetics.of(p, Cosmetics.Type.CAPE) != null;
         if (cape) open *= 0.80f;
         open *= item.openMul; // cada cosmetico puede abrir mas o menos (por defecto 1)
         float outset = cape ? 1.2f : 0f; // casi pegadas a la columna: nacen detras de la capa, no separadas
-        float zoff = cape ? 2.6f : 0f; // sin capa: como antes; con capa: justo detras de ella
+        float zoff = cape ? 1.8f : 0f; // sin capa: como antes; con capa: justo detras de ella
         mesh.outset = outset; mesh.zoff = zoff;
         membrane.outset = outset; membrane.zoff = zoff;
         if (p.isSneaking()) open = (cape ? 0.9f : 1.15f) * item.openMul;
-        float flap = 0.025f + 0.075f * a; // siempre ondulan un poco; mas en el aire
+        float flap = 0.025f + 0.075f * a + 0.04f * st.spd; // siempre ondulan un poco; mas en el aire
 
         GlStateManager.color(1f, 1f, 1f, 1f);
         GlStateManager.enableBlend();

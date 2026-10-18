@@ -146,6 +146,17 @@ public final class Cosmetics {
         addAnim(Type.CAPE, "cristal", "Cristal Prisma", 0xFF8FE9FF, 12);
         addAnim(Type.CAPE, "portal", "Portal M\u00edstico", 0xFFB04DFF, 12);
         addAnim(Type.CAPE, "dragon", "Drag\u00f3n", 0xFFD6202A, 12);
+        // Capas HD con diseños claros
+        addAnim(Type.CAPE, "rey", "Corona Real", 0xFFF5C542, 12);
+        addAnim(Type.CAPE, "rayo", "Tormenta El\u00e9ctrica", 0xFFFFE23D, 12);
+        addAnim(Type.CAPE, "calavera", "Calavera Infernal", 0xFFE8503A, 12);
+        addAnim(Type.CAPE, "espadas", "Escudo de Guerra", 0xFF2457C5, 12);
+        addAnim(Type.CAPE, "luna", "Luna M\u00e1gica", 0xFFF4F1DE, 12);
+        addAnim(Type.CAPE, "corazon", "Coraz\u00f3n Latiendo", 0xFFFF4F8B, 12);
+        addAnim(Type.CAPE, "diamante", "Diamante Radiante", 0xFF5FD8FF, 12);
+        addAnim(Type.CAPE, "brujula", "Br\u00fajula M\u00edstica", 0xFFD4AF37, 12);
+        addAnim(Type.CAPE, "sol", "Sol Naciente", 0xFFFFB400, 12);
+        addAnim(Type.CAPE, "trebol", "Tr\u00e9bol Encantado", 0xFF2ECC71, 12);
 
         add(Type.WINGS, "doradas", "Alas Doradas", 0xFFF5C542);
         add(Type.WINGS, "oscuras", "Alas Oscuras", 0xFF8E2DE2);
