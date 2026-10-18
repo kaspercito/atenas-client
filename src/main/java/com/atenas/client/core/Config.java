@@ -83,7 +83,8 @@ public final class Config {
 
             if (root.has("online")) {
                 JsonObject on = root.getAsJsonObject("online");
-                if (on.has("enabled")) CosmeticSync.enabled = on.get("enabled").getAsBoolean();
+                // "enabled" se ignora: una version anterior pudo dejarlo en false y la sincronizacion quedaba apagada para siempre
+                CosmeticSync.enabled = true;
                 if (on.has("url") && on.get("url").getAsString().trim().length() > 0) {
                     CosmeticSync.url = on.get("url").getAsString().trim();
                 }

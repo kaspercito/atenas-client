@@ -123,7 +123,7 @@ public final class Accounts {
     public static boolean currentIsOffline() {
         Session s = Minecraft.getMinecraft().getSession();
         if (s == null) return true;
-        if (s.getSessionType() == Session.Type.LEGACY) return true;
+        // OJO: el tipo de sesion NO sirve (un launcher mal configurado la deja en LEGACY aunque la cuenta sea premium): solo cuenta el UUID
         String pid = dashless(s.getPlayerID());
         return pid.length() == 0 || pid.equals(dashless(offlineUuid(s.getUsername())));
     }

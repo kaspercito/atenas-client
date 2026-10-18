@@ -182,7 +182,7 @@ public class AtenasMenu extends GuiScreen {
     private void onSide(int i) {
         switch (i) {
             case 0: tab = Tab.MODS; settingsOpen = false; break;
-            case 1: tab = Tab.COSMETICS; break;
+            case 1: mc.displayGuiScreen(new CosmeticsScreen(this)); break;
             case 2: mc.displayGuiScreen(new HudEditor(this)); break;
             case 3: mc.displayGuiScreen(new SocialScreen(this)); break;
             default: tab = Tab.ABOUT; break;

@@ -48,7 +48,7 @@ public class CosmeticSync {
     /** Maximo de nombres por peticion /cosmetics/get (el servicio no contesta mas de 40). */
     private static final int MAX_NAMES = 40;
 
-    public static boolean available() { return enabled; }
+    public static boolean available() { return true; }
 
     /** Por que NO se esta sincronizando (null = todo bien). Lo muestra el menu de cosmeticos para que el fallo no quede oculto en el log. */
     private static volatile String problem;
@@ -182,6 +182,7 @@ public class CosmeticSync {
                             final JsonObject v = players.getAsJsonObject(key);
                             selfKnown = true;
                             ok();
+                            System.out.println("[AtenasSync] servicio -> " + v);
                             Minecraft.getMinecraft().addScheduledTask(new Runnable() {
                                 @Override public void run() {
                                     if (seen != rev || dirty) return; // elegiste algo mientras tanto: gana lo tuyo
@@ -195,6 +196,7 @@ public class CosmeticSync {
                         } else if (seen == rev) {
                             selfKnown = true;
                             ok();
+                            System.out.println("[AtenasSync] el servicio no te conoce: se sube lo local");
                             dirty = true; // el servicio no te conoce todavia: sube lo que tienes
                         }
                     } catch (Exception ex) {
