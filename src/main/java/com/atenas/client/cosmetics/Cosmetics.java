@@ -192,6 +192,9 @@ public final class Cosmetics {
         add(Type.HAT, "auriculares", "Auriculares", 0xFF28283A);
         add(Type.HAT, "conejo", "Orejas de Conejo", 0xFFF2F2F7);
         add(Type.HAT, "gorra", "Gorra", 0xFF2447B8);
+        add(Type.HAT, "pirata", "Sombrero Pirata", 0xFF17171D);
+        add(Type.HAT, "vikingo", "Casco Vikingo", 0xFFA9B0BF);
+        add(Type.HAT, "laurel", "Corona de Laurel", 0xFFE8B84A);
         // Mascotas (el modelo se elige por id en PetModel: perro/dalmata = dog, husky, gato/gatonegro = cat, zorro = fox)
         add(Type.PET, "perro", "Perro", 0xFFCD9654);
         add(Type.PET, "husky", "Husky", 0xFF68707E);

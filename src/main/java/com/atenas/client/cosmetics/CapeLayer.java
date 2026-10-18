@@ -26,6 +26,7 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
         final boolean far = p != mc.thePlayer && mc.thePlayer != null && p.getDistanceSqToEntity(mc.thePlayer) > FAR_SQ;
 
         mc.getTextureManager().bindTexture(item.texture);
+        TexFilter.prepare(item.texture, item.frames > 1 ? 3 : -1);
         GlStateManager.color(1f, 1f, 1f, 1f);
         GlStateManager.pushMatrix();
         // Pegada a la espalda (la de Mojang va a 0.125; esta a 0.135 para taparla sin separarse del cuerpo). Con alas puestas NO se
