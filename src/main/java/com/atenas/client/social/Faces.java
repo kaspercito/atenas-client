@@ -84,13 +84,21 @@ public final class Faces {
         Thread t = new Thread(new Runnable() {
             @Override public void run() {
                 try {
-                    HttpURLConnection c = (HttpURLConnection) new URL("https://mc-heads.net/avatar/" + shown + "/" + SIZE).openConnection();
-                    c.setConnectTimeout(5000);
-                    c.setReadTimeout(6000);
-                    c.setRequestProperty("User-Agent", "AtenasClient");
-                    InputStream in = c.getInputStream();
-                    final BufferedImage img;
-                    try { img = ImageIO.read(in); } finally { in.close(); }
+                    // varias fuentes: si una esta bloqueada o caida se prueba la siguiente
+                    String[] urls = { "https://mc-heads.net/avatar/" + shown + "/" + SIZE, "https://minotar.net/avatar/" + shown + "/" + SIZE, "https://crafatar.com/avatars/" + shown + "?size=" + SIZE + "&overlay" };
+                    BufferedImage got = null;
+                    for (String u : urls) {
+                        try {
+                            HttpURLConnection c = (HttpURLConnection) new URL(u).openConnection();
+                            c.setConnectTimeout(4000);
+                            c.setReadTimeout(5000);
+                            c.setRequestProperty("User-Agent", "AtenasClient");
+                            InputStream in = c.getInputStream();
+                            try { got = ImageIO.read(in); } finally { in.close(); }
+                            if (got != null) break;
+                        } catch (Exception ignoredUrl) { /* siguiente fuente */ }
+                    }
+                    final BufferedImage img = got;
                     if (img == null) { FAILED.add(key); return; }
                     Minecraft.getMinecraft().addScheduledTask(new Runnable() {
                         @Override public void run() {
