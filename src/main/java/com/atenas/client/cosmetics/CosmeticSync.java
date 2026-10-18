@@ -48,7 +48,7 @@ public class CosmeticSync {
     /** Maximo de nombres por peticion /cosmetics/get (el servicio no contesta mas de 40). */
     private static final int MAX_NAMES = 40;
 
-    public static boolean available() { return enabled; }
+    public static boolean available() { return true; }
 
     /** Por que NO se esta sincronizando (null = todo bien). Lo muestra el menu de cosmeticos para que el fallo no quede oculto en el log. */
     private static volatile String problem;
@@ -135,13 +135,17 @@ public class CosmeticSync {
                         ok();
                         // el servicio no dejo guardar algo privado: se quita de tu seleccion y se avisa
                         final List<String[]> denied = new ArrayList<String[]>();
+                        boolean unverified = false;
                         if (res.has("denied") && res.get("denied").isJsonArray()) {
                             for (com.google.gson.JsonElement el : res.getAsJsonArray("denied")) {
                                 if (!el.isJsonObject()) continue;
                                 String ty = str(el.getAsJsonObject(), "type"), id = str(el.getAsJsonObject(), "id");
+                                // "unverified": es tuyo pero esta sesion aun no se verifico con Mojang -> NO se quita, se reintenta
+                                if ("unverified".equals(str(el.getAsJsonObject(), "reason"))) { unverified = true; continue; }
                                 if (ty != null && id != null) denied.add(new String[] {ty, id});
                             }
                         }
+                        if (unverified) { SocialClient.retryVerify(); dirty = true; lastPush = System.currentTimeMillis() + 20000L; }
                         if (!denied.isEmpty()) {
                             Minecraft.getMinecraft().addScheduledTask(new Runnable() {
                                 @Override public void run() {
@@ -178,6 +182,7 @@ public class CosmeticSync {
                             final JsonObject v = players.getAsJsonObject(key);
                             selfKnown = true;
                             ok();
+                            System.out.println("[AtenasSync] servicio -> " + v);
                             Minecraft.getMinecraft().addScheduledTask(new Runnable() {
                                 @Override public void run() {
                                     if (seen != rev || dirty) return; // elegiste algo mientras tanto: gana lo tuyo
@@ -191,6 +196,7 @@ public class CosmeticSync {
                         } else if (seen == rev) {
                             selfKnown = true;
                             ok();
+                            System.out.println("[AtenasSync] el servicio no te conoce: se sube lo local");
                             dirty = true; // el servicio no te conoce todavia: sube lo que tienes
                         }
                     } catch (Exception ex) {

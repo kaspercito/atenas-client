@@ -106,6 +106,9 @@ public final class SocialClient {
     private static volatile String verifyError = "";
     public static String verifyError() { return verifyError; }
 
+    /** Olvida un intento de verificacion fallido para que la proxima llamada lo vuelva a intentar. */
+    public static synchronized void retryVerify() { failedFor = ""; failedAt = 0; }
+
     private static final ExecutorService POOL = Executors.newSingleThreadExecutor(new ThreadFactory() {
         @Override public Thread newThread(Runnable r) {
             Thread t = new Thread(r, "Atenas-Social");

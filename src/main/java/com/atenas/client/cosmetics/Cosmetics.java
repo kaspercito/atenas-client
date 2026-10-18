@@ -356,10 +356,11 @@ public final class Cosmetics {
         boolean resolved = false;
         for (Iterator<Map.Entry<Type, String>> it = PENDING.entrySet().iterator(); it.hasNext();) {
             Map.Entry<Type, String> e = it.next();
-            Item f = find(e.getKey(), e.getValue());
+            final Type pt = e.getKey();
+            Item f = find(pt, e.getValue());
             if (f == null) continue; // sigue sin existir (se queda pendiente)
-            it.remove();
-            if (!f.locked && SELECTED.get(e.getKey()) == null) { SELECTED.put(e.getKey(), f); resolved = true; }
+            it.remove(); // la entrada del EnumMap no se puede leer despues de remove(): la clave se guardo antes
+            if (!f.locked && SELECTED.get(pt) == null) { SELECTED.put(pt, f); resolved = true; }
         }
         catalogApplied = true;
         CosmeticSync.touch(); // los demas jugadores se vuelven a resolver con el catalogo nuevo
