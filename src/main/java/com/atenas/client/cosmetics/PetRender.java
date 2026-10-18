@@ -127,6 +127,7 @@ public class PetRender {
             owner.fallFlying = false; owner.flying = p.capabilities.isFlying; owner.swimming = false;
             owner.inWater = p.isInWater(); owner.riding = p.isRiding(); owner.climbing = p.isOnLadder(); owner.onGround = p.onGround;
             pet.brain.tick(owner, GROUND);
+            if (pet.brain.sound != PetBrain.SND_NONE) PetSounds.play(item.modelId(), pet.brain.sound, pet.brain.x, pet.brain.y + 0.3, pet.brain.z);
         }
         // quien ya no esta (se fue, se quito la mascota o se alejo) pierde su mascota; al volver aparece junto a el
         for (Iterator<Pet> it = pets.values().iterator(); it.hasNext();) if (!it.next().seen) it.remove();
@@ -151,9 +152,10 @@ public class PetRender {
             double x = b.ix(pt), y = b.iy(pt), z = b.iz(pt);
             // pegada a la camara (la tuya en primera persona, con la mascota en tu hombro) tapa la pantalla: no se dibuja
             double cdx = x - rm.viewerPosX, cdy = y + 0.2 - rm.viewerPosY, cdz = z - rm.viewerPosZ;
-            // la tuya en primera persona se oculta si pasa cerca de la camara (estorba al girar y caminar); las demas, solo si casi la tocan
-            double cut = pet.mine && mc.gameSettings.thirdPersonView == 0 ? 1.6 : 0.9;
-            if (cdx * cdx + cdy * cdy + cdz * cdz < cut * cut) continue;
+            // En primera persona, TU mascota se oculta solo mientras va (o salta) al hombro, p. ej. al volar: ahi tapa la pantalla.
+            // En el suelo siempre se ve, tambien de cerca; solo desaparece si toca la lente.
+            if (pet.mine && mc.gameSettings.thirdPersonView == 0 && b.iperch(pt) > 0.30f) continue;
+            if (cdx * cdx + cdy * cdy + cdz * cdz < 0.25) continue;
             int light = mc.theWorld.getCombinedLight(new BlockPos(x, y + 0.5, z), 0);
             OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light & 65535, light >> 16);
             GlStateManager.color(1f, 1f, 1f, 1f);
