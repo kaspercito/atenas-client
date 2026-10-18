@@ -5,6 +5,9 @@ import java.util.Iterator;
 import java.util.Map;
 
 import net.minecraft.block.Block;
+import net.minecraft.client.model.ModelBase;
+import net.minecraft.client.model.ModelRenderer;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
@@ -32,10 +35,23 @@ public class PetRender {
     private static final class Pet {
         final PetBrain brain;
         Cosmetics.Item item;
-        boolean seen;
+        boolean seen, mine;
         String kind = "";
         Pet(long seed) { brain = new PetBrain(seed); }
     }
+
+    /** Hombrera: una almohadilla de lana marron donde se posa la mascota (se dibuja solo cuando va en el hombro). */
+    private static final class PadModel extends ModelBase {
+        private final ModelRenderer box;
+        PadModel() {
+            textureWidth = 32; textureHeight = 16;
+            box = new ModelRenderer(this, 0, 0);
+            box.addBox(-3f, 0f, -3f, 6, 2, 6);
+        }
+        void render() { box.render(0.0625f); }
+    }
+    private static final ResourceLocation PAD_TEX = new ResourceLocation("textures/blocks/wool_colored_brown.png");
+    private PadModel pad;
 
     private final PetBrain.Owner owner = new PetBrain.Owner();
     private final Map<String, Pet> pets = new HashMap<String, Pet>();
@@ -103,6 +119,7 @@ public class PetRender {
             if (kd == null) continue;
             if (!kd.name.equals(pet.kind)) { pet.kind = kd.name; pet.brain.configure(kd.flier, kd.avoidWater, kd.hop); }
             pet.seen = true;
+            pet.mine = p == mc.thePlayer;
             pet.item = item;
             owner.x = p.posX; owner.y = p.posY; owner.z = p.posZ;
             owner.yaw = p.rotationYaw; owner.bodyYaw = p.renderYawOffset; owner.pitch = p.rotationPitch;
@@ -132,6 +149,11 @@ public class PetRender {
             if (pet.item == null) continue;
             PetBrain b = pet.brain;
             double x = b.ix(pt), y = b.iy(pt), z = b.iz(pt);
+            // pegada a la camara (la tuya en primera persona, con la mascota en tu hombro) tapa la pantalla: no se dibuja
+            double cdx = x - rm.viewerPosX, cdy = y + 0.2 - rm.viewerPosY, cdz = z - rm.viewerPosZ;
+            // la tuya en primera persona se oculta si pasa cerca de la camara (estorba al girar y caminar); las demas, solo si casi la tocan
+            double cut = pet.mine && mc.gameSettings.thirdPersonView == 0 ? 1.6 : 0.9;
+            if (cdx * cdx + cdy * cdy + cdz * cdz < cut * cut) continue;
             int light = mc.theWorld.getCombinedLight(new BlockPos(x, y + 0.5, z), 0);
             OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light & 65535, light >> 16);
             GlStateManager.color(1f, 1f, 1f, 1f);
@@ -153,6 +175,17 @@ public class PetRender {
                 GlStateManager.rotate((float) Math.toDegrees(roll), 0f, 0f, 1f);
                 GlStateManager.rotate((float) -Math.toDegrees(pitch), 1f, 0f, 0f);
                 GlStateManager.translate(0f, -cy, 0f);
+            }
+            float perch = b.iperch(pt);
+            if (perch > 0.5f) {   // hombrera bajo las patas
+                float padS = Math.min(sc * 1.6f, 0.9f) * Math.min(1f, (perch - 0.5f) * 2f);
+                if (pad == null) pad = new PadModel();
+                mc.getTextureManager().bindTexture(PAD_TEX);
+                GlStateManager.pushMatrix();
+                GlStateManager.scale(-padS, -padS, padS);
+                pad.render();
+                GlStateManager.popMatrix();
+                mc.getTextureManager().bindTexture(pet.item.texture);
             }
             GlStateManager.scale(-sc, -sc, sc);
             GlStateManager.translate(0f, -1.501f, 0f); // en el modelo los pies estan en y = 24 (1.5 bloques)
