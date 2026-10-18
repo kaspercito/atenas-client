@@ -81,7 +81,6 @@ public final class ModuleManager {
         add(new FullbrightModule(), Module.Category.UTIL);
         add(new TimeModule(), Module.Category.UTIL);
         add(new BadgeModule(), Module.Category.UTIL);
-        add(new ButtonsModule(), Module.Category.UTIL);
         BY_CLASS.clear();
         for (Module m : MODULES) BY_CLASS.put(m.getClass(), m);
         List<HudModule> hs = new ArrayList<HudModule>();

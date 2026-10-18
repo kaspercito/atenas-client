@@ -50,6 +50,30 @@ public class CosmeticSync {
 
     public static boolean available() { return enabled; }
 
+    /** Por que NO se esta sincronizando (null = todo bien). Lo muestra el menu de cosmeticos para que el fallo no quede oculto en el log. */
+    private static volatile String problem;
+
+    public static String problem() { return problem; }
+
+    private static void ok() { problem = null; }
+
+    /** Traduce el error del servicio a algo que el jugador pueda entender y actuar. */
+    private static void fail(String where, Exception ex) {
+        String msg = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
+        String code = ex instanceof SocialClient.ApiError ? ((SocialClient.ApiError) ex).code : "";
+        if ("verify_required".equals(code) || "not_verified".equals(code)) {
+            msg = "Sin sincronizar: este nick es de una cuenta premium. Entra con tu cuenta de Microsoft.";
+        } else if ("not_found".equals(code)) {
+            msg = "Sin sincronizar: el servicio no tiene los cosm\u00e9ticos (hay que actualizar el Worker).";
+        } else if (msg.toLowerCase(Locale.ROOT).contains("sin conexion")) {
+            msg = "Sin sincronizar: sin conexi\u00f3n con el servicio.";
+        } else {
+            msg = "Sin sincronizar: " + msg;
+        }
+        problem = msg;
+        System.err.println("[AtenasClient] " + where + ": " + msg + " (nick=" + SocialClient.myName() + ")");
+    }
+
     public static void ensureToken() { /* la identidad vive en SocialClient (social.json) */ }
 
     public static void markDirty() { dirty = true; rev++; lastPush = 0; }
@@ -108,6 +132,7 @@ public class CosmeticSync {
                         JsonObject res = SocialClient.post("/cosmetics/set", o);
                         if (sent == rev) dirty = false;
                         selfKnown = true;
+                        ok();
                         // el servicio no dejo guardar algo privado: se quita de tu seleccion y se avisa
                         final List<String[]> denied = new ArrayList<String[]>();
                         if (res.has("denied") && res.get("denied").isJsonArray()) {
@@ -128,7 +153,7 @@ public class CosmeticSync {
                         }
                     } catch (IOException ex) {
                         lastPush = System.currentTimeMillis() + 10000L; // reintenta en ~13 s
-                        System.err.println("[AtenasClient] push: " + ex.getMessage());
+                        fail("push", ex);
                     } finally {
                         PUSH_BUSY.set(false);
                     }
@@ -152,6 +177,7 @@ public class CosmeticSync {
                         if (players.has(key) && players.get(key).isJsonObject()) {
                             final JsonObject v = players.getAsJsonObject(key);
                             selfKnown = true;
+                            ok();
                             Minecraft.getMinecraft().addScheduledTask(new Runnable() {
                                 @Override public void run() {
                                     if (seen != rev || dirty) return; // elegiste algo mientras tanto: gana lo tuyo
@@ -164,10 +190,11 @@ public class CosmeticSync {
                             });
                         } else if (seen == rev) {
                             selfKnown = true;
+                            ok();
                             dirty = true; // el servicio no te conoce todavia: sube lo que tienes
                         }
                     } catch (Exception ex) {
-                        System.err.println("[AtenasClient] self: " + ex.getMessage());
+                        fail("self", ex);
                     } finally {
                         SELF_BUSY.set(false);
                     }
@@ -225,7 +252,7 @@ public class CosmeticSync {
                     stamp++;
                 } catch (Exception ex) {
                     lastFetch = 0;
-                    System.err.println("[AtenasClient] fetch: " + ex.getMessage());
+                    fail("fetch", ex);
                 } finally {
                     FETCH_BUSY.set(false);
                 }

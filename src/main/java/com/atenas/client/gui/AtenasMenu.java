@@ -608,6 +608,9 @@ public class AtenasMenu extends GuiScreen {
         }
         if (Cosmetics.notice.length() > 0 && System.currentTimeMillis() < Cosmetics.noticeUntil) {
             Draw.text(Draw.fit(Cosmetics.notice, bw - prevW - 16), bx + prevW + 12, by + 5, Theme.AMBER);
+        } else if (CosmeticSync.problem() != null) {
+            // la sincronizacion con 1.20.1 esta fallando: se dice por que (antes solo quedaba en el log)
+            Draw.text(Draw.fit(CosmeticSync.problem(), bw - prevW - 16), bx + prevW + 12, by + 5, Theme.AMBER);
         }
 
         int lx = bx + prevW + 8, lw = bw - prevW - 8;

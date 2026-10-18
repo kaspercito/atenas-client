@@ -21,8 +21,8 @@ public class AtenasButton extends GuiButton {
     }
 
     /**
-     * Dibuja un boton con el estilo Atenas y devuelve el nuevo brillo (0..1, animado). Lo usa este boton y tambien MixinGuiButton,
-     * que lo pone a los botones vanilla sin cambiar de clase (asi las pantallas que guardan sus botones siguen funcionando).
+     * Dibuja un boton con el estilo Atenas y devuelve el nuevo brillo (0..1, animado). Solo lo usan las pantallas propias de Atenas
+     * (menu principal, Amigos, Cosmeticos...): los botones de Minecraft y del texture pack no se tocan.
      */
     public static float paint(int x, int y, int w, int h, String text, boolean enabled, boolean hovered, float glow) {
         boolean on = hovered && enabled;
@@ -45,24 +45,5 @@ public class AtenasButton extends GuiButton {
         int tc = !enabled ? Theme.OFF : on ? 0xFFFFFFFF : Theme.TEXT;
         Draw.headingFit(text, x + cut, w - 2 * cut, y + (h - 8) / 2, tc, (int) (glow * 1.5f));
         return glow;
-    }
-
-    /** Barra de progreso y tirador de un deslizador (v = 0..1). Se dibuja encima del boton ya pintado. */
-    public static void sliderHandle(int x, int y, int w, int h, float v, boolean enabled) {
-        int hx = x + (int) (Math.max(0f, Math.min(1f, v)) * (w - 6));
-        Draw.rect(x + 3, y + h - 3, Math.max(0, hx - x - 3), 2, enabled ? 0xAA8B5CF6 : 0x663A3658);
-        Draw.rect(hx, y + 2, 6, h - 4, enabled ? 0xD08B5CF6 : 0xB03A3658);
-        Draw.rect(hx, y + 2, 6, 1, enabled ? Theme.CYAN : Theme.OFF);
-        Draw.border(hx, y + 2, 6, h - 4, enabled ? Theme.ACCENT : 0xFF241F3C);
-    }
-
-    /** Candado dibujado con rectangulos (el de la dificultad en Opciones). locked = cerrado. */
-    public static void padlock(int x, int y, int w, int h, boolean locked, int c) {
-        int cx = x + w / 2, top = y + h / 2 - 6;
-        Draw.rect(cx - 4, top + 6, 9, 7, c);
-        Draw.rect(cx, top + 8, 1, 3, 0xFF090812);
-        Draw.rect(cx - 2, top, 5, 1, c);
-        Draw.rect(cx - 3, top + 1, 1, locked ? 5 : 3, c);
-        Draw.rect(cx + 3, top + 1, 1, locked ? 5 : 2, c);
     }
 }
