@@ -70,7 +70,7 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         float zoff = cape ? 2.6f : 0f; // sin capa: como antes; con capa: justo detras de ella
         mesh.outset = outset; mesh.zoff = zoff;
         membrane.outset = outset; membrane.zoff = zoff;
-        if (p.isSneaking()) open = (cape ? 0.5f : 0.6f) * item.openMul; // agachado: mas cerradas, pegadas al cuerpo
+        if (p.isSneaking()) open = (cape ? 0.9f : 1.15f) * item.openMul;
         float flap = 0.025f + 0.075f * a; // siempre ondulan un poco; mas en el aire
 
         GlStateManager.color(1f, 1f, 1f, 1f);
