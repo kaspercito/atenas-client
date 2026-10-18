@@ -67,7 +67,7 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         if (cape) open *= 0.80f;
         open *= item.openMul; // cada cosmetico puede abrir mas o menos (por defecto 1)
         float outset = cape ? 1.2f : 0f; // casi pegadas a la columna: nacen detras de la capa, no separadas
-        float zoff = cape ? 2.0f : 0f;
+        float zoff = cape ? 3.2f : 2.0f; // siempre detras de la cabeza y de la capa
         mesh.outset = outset; mesh.zoff = zoff;
         membrane.outset = outset; membrane.zoff = zoff;
         if (p.isSneaking()) open = (cape ? 0.5f : 0.6f) * item.openMul; // agachado: mas cerradas, pegadas al cuerpo

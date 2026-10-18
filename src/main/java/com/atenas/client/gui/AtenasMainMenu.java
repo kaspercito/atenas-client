@@ -90,10 +90,10 @@ public class AtenasMainMenu extends GuiScreen {
         buttonList.add(new MenuButton(ID_SINGLE, bx, btnY, bw, bh, Lang.t("Un jugador", "Singleplayer"), null, false));
         buttonList.add(new MenuButton(ID_MULTI, bx, btnY + (bh + gap), bw, bh, Lang.t("Multijugador", "Multiplayer"), null, false));
         buttonList.add(new MenuButton(ID_OPTIONS, bx, btnY + 2 * (bh + gap), bw, bh, Lang.t("Opciones", "Options"), null, false));
-        friendsBtn = new MenuButton(ID_FRIENDS, bx, y2, half, sh, Lang.t("Amigos", "Friends"), "Shift+Tab", true);
+        friendsBtn = new MenuButton(ID_FRIENDS, bx, y2, half, sh, Lang.t("Amigos", "Friends"), null, true);
         buttonList.add(friendsBtn);
         buttonList.add(new MenuButton(ID_COSMETICS, bx + half + 6, y2, half, sh, Lang.t("Cosm\u00e9ticos", "Cosmetics"), null, true));
-        buttonList.add(new MenuButton(ID_ACCOUNT, bx + 2 * (half + 6), y2, bw - 2 * (half + 6), sh, Lang.t("Cuenta", "Account"), Lang.t("Cambiar", "Switch"), true));
+        buttonList.add(new MenuButton(ID_ACCOUNT, bx + 2 * (half + 6), y2, bw - 2 * (half + 6), sh, Lang.t("Cuenta", "Account"), null, true));
         buttonList.add(new CloseButton(ID_CLOSE, width - 32, 10, 22));
         SocialClient.sync(false, "");
         if (!readyAnnounced) {

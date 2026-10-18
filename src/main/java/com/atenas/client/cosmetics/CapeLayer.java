@@ -55,7 +55,7 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
         float tilt = swing / 2f + lift;
         float bend = (float) Math.toRadians(tilt * 0.65f);
         float amp = CapeWave.ampFor(swing); // quieta: respiro leve; corriendo: ondea fuerte
-        GlStateManager.rotate(Math.max(8f, 6f + tilt * 0.35f), 1f, 0f, 0f); // minimo 8 grados: nunca se hunde en la espalda
+        GlStateManager.rotate(Math.max(10f, 6f + tilt * 0.35f) + (p.isSneaking() ? 12f : 0f), 1f, 0f, 0f); // agachado: mas atras para librar la cadera
         GlStateManager.rotate(sway / 4f, 0f, 0f, 1f);
         GlStateManager.rotate(-sway / 2f, 0f, 1f, 0f);
         GlStateManager.rotate(180f, 0f, 1f, 0f);

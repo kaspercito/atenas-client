@@ -1,0 +1,36 @@
+[1mdiff --cc src/main/java/com/atenas/client/cosmetics/CapeLayer.java[m
+[1mindex 723764c,1e258a9..0000000[m
+[1m--- a/src/main/java/com/atenas/client/cosmetics/CapeLayer.java[m
+[1m+++ b/src/main/java/com/atenas/client/cosmetics/CapeLayer.java[m
+[36m@@@ -55,7 -55,7 +55,11 @@@[m [mpublic class CapeLayer implements Layer[m
+          float tilt = swing / 2f + lift;[m
+          float bend = (float) Math.toRadians(tilt * 0.65f);[m
+          float amp = CapeWave.ampFor(swing); // quieta: respiro leve; corriendo: ondea fuerte[m
+[32m++<<<<<<< HEAD[m
+[32m +        GlStateManager.rotate(Math.max(8f, 6f + tilt * 0.35f), 1f, 0f, 0f); // minimo 8 grados: nunca se hunde en la espalda[m
+[32m++=======[m
+[32m+         GlStateManager.rotate(Math.max(10f, 6f + tilt * 0.35f) + (p.isSneaking() ? 12f : 0f), 1f, 0f, 0f); // agachado: mas atras para librar la cadera // minimo 8 grados: nunca se hunde en la espalda[m
+[32m++>>>>>>> b32d9ba (fix(cosmetics): capa sin clipping al caminar y agachado, alas detrás de la cabeza, vista previa en el menú; botón Cosméticos y cabeza en Cuentas)[m
+          GlStateManager.rotate(sway / 4f, 0f, 0f, 1f);[m
+          GlStateManager.rotate(-sway / 2f, 0f, 1f, 0f);[m
+          GlStateManager.rotate(180f, 0f, 1f, 0f);[m
+[1mdiff --cc src/main/java/com/atenas/client/gui/AtenasMainMenu.java[m
+[1mindex 2a5b541,55139bc..0000000[m
+[1m--- a/src/main/java/com/atenas/client/gui/AtenasMainMenu.java[m
+[1m+++ b/src/main/java/com/atenas/client/gui/AtenasMainMenu.java[m
+[36m@@@ -90,10 -90,10 +90,14 @@@[m [mpublic class AtenasMainMenu extends Gui[m
+          buttonList.add(new MenuButton(ID_SINGLE, bx, btnY, bw, bh, Lang.t("Un jugador", "Singleplayer"), null, false));[m
+          buttonList.add(new MenuButton(ID_MULTI, bx, btnY + (bh + gap), bw, bh, Lang.t("Multijugador", "Multiplayer"), null, false));[m
+          buttonList.add(new MenuButton(ID_OPTIONS, bx, btnY + 2 * (bh + gap), bw, bh, Lang.t("Opciones", "Options"), null, false));[m
+[31m-         friendsBtn = new MenuButton(ID_FRIENDS, bx, y2, half, sh, Lang.t("Amigos", "Friends"), "Shift+Tab", true);[m
+[32m+         friendsBtn = new MenuButton(ID_FRIENDS, bx, y2, half, sh, Lang.t("Amigos", "Friends"), null, true);[m
+          buttonList.add(friendsBtn);[m
+          buttonList.add(new MenuButton(ID_COSMETICS, bx + half + 6, y2, half, sh, Lang.t("Cosm\u00e9ticos", "Cosmetics"), null, true));[m
+[32m++<<<<<<< HEAD[m
+[32m +        buttonList.add(new MenuButton(ID_ACCOUNT, bx + 2 * (half + 6), y2, bw - 2 * (half + 6), sh, Lang.t("Cuenta", "Account"), Lang.t("Cambiar", "Switch"), true));[m
+[32m++=======[m
+[32m+         buttonList.add(new MenuButton(ID_ACCOUNT, bx + 2 * (half + 6), y2, bw - 2 * (half + 6), sh, Lang.t("Cuenta", "Account"), null, true));[m
+[32m++>>>>>>> b32d9ba (fix(cosmetics): capa sin clipping al caminar y agachado, alas detrás de la cabeza, vista previa en el menú; botón Cosméticos y cabeza en Cuentas)[m
+          buttonList.add(new CloseButton(ID_CLOSE, width - 32, 10, 22));[m
+          SocialClient.sync(false, "");[m
+          if (!readyAnnounced) {[m

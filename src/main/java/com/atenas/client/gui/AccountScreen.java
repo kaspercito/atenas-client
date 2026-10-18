@@ -284,8 +284,10 @@ public class AccountScreen extends GuiScreen {
             Draw.border(x, y, w, ROW, active ? Theme.ACCENT_DIM : over ? Theme.VIOLET : Theme.BORDER);
             Draw.rect(x, y, 2, ROW, active ? Theme.VIOLET : Theme.ACCENT_DIM);
             // inicial del nick en un cuadro
-            Draw.rect(x + 8, y + 5, 18, 18, active ? Theme.VIOLET : Theme.ACCENT_DIM);
-            Draw.centered(e.name.substring(0, 1).toUpperCase(), x + 17, y + 10, Theme.INK);
+            if (!com.atenas.client.social.Faces.draw(e.name, x + 8, y + 5, 18, 1f, e.offline())) {
+                Draw.rect(x + 8, y + 5, 18, 18, active ? Theme.VIOLET : Theme.ACCENT_DIM);
+                Draw.centered(e.name.substring(0, 1).toUpperCase(), x + 17, y + 10, Theme.INK);
+            }
 
             int by = y + 6, bh = 16;
             int right = x + w - 6;
