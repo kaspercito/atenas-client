@@ -187,8 +187,6 @@ public class AtenasMainMenu extends GuiScreen {
         if (packX + Draw.width(pack) + 8 <= chipLeft) {
             Draw.text(pack, packX, fy, Theme.DIM);
             verEnd = packX + Draw.width(pack);
-            String ver = "  \u00b7  Atenas Client " + AtenasClient.VERSION;
-            if (verEnd + Draw.width(ver) + 8 <= chipLeft) { Draw.text(ver, verEnd, fy, Theme.DIM); verEnd += Draw.width(ver); }
         }
         String fr = SocialEvents.badgeLabel(Lang.t("Shift+Tab  \u00b7  Amigos y chat", "Shift+Tab  \u00b7  Friends and chat"));
         int frW = Draw.width(fr), frX = width / 2 - frW / 2;

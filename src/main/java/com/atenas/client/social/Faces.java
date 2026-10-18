@@ -71,13 +71,37 @@ public final class Faces {
         return name != null && FAILED.contains(name.toLowerCase(java.util.Locale.ROOT));
     }
 
-    /** Dibuja la cabeza de Steve (con la capa del sombrero), a "size" pixeles de GUI. */
+    /**
+     * Dibuja la cabeza del skin por defecto de la cuenta (Steve o Alex segun el UUID, igual que se ve dentro del juego), a "size"
+     * pixeles de GUI. Lee el tamano REAL de la textura: antes se suponia 64x32 y con el Steve de 64x64 se recortaba el torso
+     * (salian 4 cuadros de colores en vez de la cara).
+     */
     public static void drawSteve(int x, int y, int size, float alpha) {
-        Minecraft.getMinecraft().getTextureManager().bindTexture(DefaultPlayerSkin.getDefaultSkinLegacy());
+        drawHead(DefaultPlayerSkin.getDefaultSkinLegacy(), x, y, size, alpha);
+    }
+
+    /** Skin por defecto de ESTA cuenta (Steve o Alex segun su UUID): lo que se ve de uno mismo en el juego cuando la cuenta no tiene skin. */
+    private static ResourceLocation ownDefaultSkin() {
+        try {
+            Minecraft mc = Minecraft.getMinecraft();
+            if (mc.getSession() != null && mc.getSession().getProfile() != null && mc.getSession().getProfile().getId() != null) {
+                return DefaultPlayerSkin.getDefaultSkin(mc.getSession().getProfile().getId());
+            }
+        } catch (Throwable ignored) { /* se queda Steve */ }
+        return DefaultPlayerSkin.getDefaultSkinLegacy();
+    }
+
+    private static void drawHead(ResourceLocation skin, int x, int y, int size, float alpha) {
+        Minecraft mc = Minecraft.getMinecraft();
+        mc.getTextureManager().bindTexture(skin);
+        int tw = org.lwjgl.opengl.GL11.glGetTexLevelParameteri(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, 0, org.lwjgl.opengl.GL11.GL_TEXTURE_WIDTH);
+        int th = org.lwjgl.opengl.GL11.glGetTexLevelParameteri(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, 0, org.lwjgl.opengl.GL11.GL_TEXTURE_HEIGHT);
+        if (tw <= 0 || th <= 0) { tw = 64; th = 64; }
+        float k = tw / 64f; // skins HD: las coordenadas se escalan
         GlStateManager.enableBlend();
         GlStateManager.color(1f, 1f, 1f, alpha);
-        Gui.drawScaledCustomSizeModalRect(x, y, 8f, 8f, 8, 8, size, size, 64f, 32f);
-        Gui.drawScaledCustomSizeModalRect(x, y, 40f, 8f, 8, 8, size, size, 64f, 32f);
+        Gui.drawScaledCustomSizeModalRect(x, y, 8f * k, 8f * k, (int) (8 * k), (int) (8 * k), size, size, (float) tw, (float) th);
+        Gui.drawScaledCustomSizeModalRect(x, y, 40f * k, 8f * k, (int) (8 * k), (int) (8 * k), size, size, (float) tw, (float) th);
         GlStateManager.color(1f, 1f, 1f, 1f);
     }
 
@@ -86,7 +110,8 @@ public final class Faces {
      * mientras la cara todavia esta llegando; entonces quien llama pone la inicial. Si la descarga falla, se dibuja Steve.
      */
     public static boolean draw(String name, int x, int y, int size, float alpha, boolean steve) {
-        if (steve || name == null || !SocialClient.validName(name)) { drawSteve(x, y, size, alpha); return true; }
+        if (steve) { drawHead(ownDefaultSkin(), x, y, size, alpha); return true; } // cuenta sin conexion (la tuya): su skin por defecto real
+        if (name == null || !SocialClient.validName(name)) { drawSteve(x, y, size, alpha); return true; }
         ResourceLocation face = get(name);
         if (face != null) {
             Minecraft.getMinecraft().getTextureManager().bindTexture(face);

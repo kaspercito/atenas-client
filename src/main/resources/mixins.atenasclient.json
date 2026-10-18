@@ -16,7 +16,8 @@
     "MixinGuiOverlayDebug",
     "MixinEntityRenderer",
     "MixinItemRenderer",
-    "MixinMinecraft"
+    "MixinMinecraft",
+    "MixinMinecraftSplash"
   ],
   "injectors": {
     "defaultRequire": 0

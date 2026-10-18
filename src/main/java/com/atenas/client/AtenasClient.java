@@ -19,13 +19,30 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 
-@Mod(modid = AtenasClient.MODID, name = AtenasClient.NAME, version = AtenasClient.VERSION,
+// useMetadata: el nombre y la version salen de mcmod.info, que Gradle rellena con la version del tag de git (v1.2.3 -> 1.2.3).
+@Mod(modid = AtenasClient.MODID, useMetadata = true,
         acceptedMinecraftVersions = "[1.8.9]", clientSideOnly = true)
 public class AtenasClient {
 
     public static final String MODID = "atenasclient";
     public static final String NAME = "Atenas Client";
-    public static final String VERSION = "1.0.4";
+    /** Version del jar: la manda el tag de git (build.gradle la escribe en atenas-version.txt). Sin tag sale "dev". */
+    public static final String VERSION = readVersion();
+
+    private static String readVersion() {
+        try {
+            java.io.InputStream in = AtenasClient.class.getResourceAsStream("/atenas-version.txt");
+            if (in == null) return "dev";
+            try {
+                java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream();
+                byte[] buf = new byte[64];
+                int n;
+                while ((n = in.read(buf)) > 0) bo.write(buf, 0, n);
+                String v = new String(bo.toByteArray(), "UTF-8").trim();
+                return v.isEmpty() || v.startsWith("$") ? "dev" : v;
+            } finally { in.close(); }
+        } catch (Exception e) { return "dev"; }
+    }
 
     /** true si OptiFine esta cargado (se detecta por un campo que solo OptiFine agrega a GameSettings). */
     public static boolean hasOptiFine() {
@@ -42,7 +59,13 @@ public class AtenasClient {
     public static KeyBinding keyZoom;
 
     @Mod.EventHandler
+    public void preInit(net.minecraftforge.fml.common.event.FMLPreInitializationEvent event) {
+        com.atenas.client.gui.AtenasSplash.step(0.30f, "Cargando mods");
+    }
+
+    @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
+        com.atenas.client.gui.AtenasSplash.step(0.50f, "Cargando Atenas Client");
         keyMenu = new KeyBinding("Abrir men\u00fa Atenas", Keyboard.KEY_RSHIFT, NAME);
         ClientRegistry.registerKeyBinding(keyMenu);
         keyPerspective = new KeyBinding("Perspective (mirar alrededor)", Keyboard.KEY_LMENU, NAME);
@@ -73,6 +96,7 @@ public class AtenasClient {
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
         Cosmetics.registerLayers();
+        com.atenas.client.gui.AtenasSplash.step(0.65f, "Preparando recursos");
     }
 
     /** Pone el logo de Atenas (el mismo del launcher) como icono de la ventana. */

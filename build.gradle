@@ -13,7 +13,7 @@ buildscript {
 apply plugin: 'net.minecraftforge.gradle.forge'
 apply plugin: 'org.spongepowered.mixin'
 
-version = project.hasProperty("modVersion") ? project.modVersion : "1.0.4"
+version = project.hasProperty("modVersion") ? project.modVersion : "dev"
 group = "com.atenas.client"
 archivesBaseName = "AtenasClient"
 
@@ -58,11 +58,11 @@ processResources {
     inputs.property "version", project.version
     inputs.property "mcversion", project.minecraft.version
     from(sourceSets.main.resources.srcDirs) {
-        include 'mcmod.info'
+        include 'mcmod.info', 'atenas-version.txt'
         expand 'version': project.version, 'mcversion': project.minecraft.version
     }
     from(sourceSets.main.resources.srcDirs) {
-        exclude 'mcmod.info'
+        exclude 'mcmod.info', 'atenas-version.txt'
     }
 }
 
