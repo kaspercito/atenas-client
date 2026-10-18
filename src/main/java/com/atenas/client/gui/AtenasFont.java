@@ -119,20 +119,17 @@ public final class AtenasFont {
 
     /** Dibuja con sombra suave. Soporta los codigos de color de Minecraft. */
     public static void draw(String s, float x, float y, int argb, boolean shadow) {
-        if (s == null || s.isEmpty()) return;
-        if (shadow) {
-            int a = (argb >>> 24) == 0 ? 255 : (argb >>> 24);
-            drawRaw(s, x + 0.75f, y + 0.75f, (a * 0x70 / 255) << 24, true);
-        }
-        drawRaw(s, x, y, argb, false);
+        drawImpl(s, x, y, argb, shadow, false);
     }
 
-    private static void drawRaw(String s, float x, float y, int argb, boolean flat) {
-        float a0 = (argb >> 24 & 255) / 255f;
-        if (a0 == 0f && !flat) a0 = 1f;
-        if (flat && (argb >>> 24) == 0) return;
-        float r = (argb >> 16 & 255) / 255f, g = (argb >> 8 & 255) / 255f, b = (argb & 255) / 255f;
-        float top = y + 7f - (ascent + 8f) / SS;
+    /** Como {@link #draw}, pero con las letras separadas 1 px (titulos): la misma separacion que Draw.heading calculaba letra por letra. */
+    public static void drawSpaced(String s, float x, float y, int argb, boolean shadow) {
+        drawImpl(s, x, y, argb, shadow, true);
+    }
+
+    /** La sombra y el texto van en el MISMO buffer: una sola llamada de dibujo por cadena (antes eran dos). */
+    private static void drawImpl(String s, float x, float y, int argb, boolean shadow, boolean spaced) {
+        if (s == null || s.isEmpty()) return;
         Minecraft.getMinecraft().getTextureManager().bindTexture(tex);
         GlStateManager.enableBlend();
         GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
@@ -140,6 +137,21 @@ public final class AtenasFont {
         Tessellator t = Tessellator.getInstance();
         WorldRenderer wr = t.getWorldRenderer();
         wr.begin(7, DefaultVertexFormats.POSITION_TEX_COLOR);
+        if (shadow) {
+            int a = (argb >>> 24) == 0 ? 255 : (argb >>> 24);
+            emit(wr, s, x + 0.75f, y + 0.75f, (a * 0x70 / 255) << 24, true, spaced);
+        }
+        emit(wr, s, x, y, argb, false, spaced);
+        t.draw();
+        GlStateManager.color(1f, 1f, 1f, 1f);
+    }
+
+    private static void emit(WorldRenderer wr, String s, float x, float y, int argb, boolean flat, boolean spaced) {
+        float a0 = (argb >> 24 & 255) / 255f;
+        if (a0 == 0f && !flat) a0 = 1f;
+        if (flat && (argb >>> 24) == 0) return;
+        float r = (argb >> 16 & 255) / 255f, g = (argb >> 8 & 255) / 255f, b = (argb & 255) / 255f;
+        float top = y + 7f - (ascent + 8f) / SS;
         float cx = x;
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
@@ -160,10 +172,9 @@ public final class AtenasFont {
                 wr.pos(x1, y0, 0).tex(u1, v0).color(r, g, b, a0).endVertex();
                 wr.pos(x0, y0, 0).tex(u0, v0).color(r, g, b, a0).endVertex();
             }
-            cx += ADV[ci] / SS;
+            // con separacion: cada letra ocupa su ancho redondeado + 1 px (igual que width(letra) + 1 de Draw.heading)
+            cx += spaced ? (float) Math.ceil(ADV[ci] / SS) + 1f : ADV[ci] / SS;
         }
-        t.draw();
-        GlStateManager.color(1f, 1f, 1f, 1f);
     }
 
     /** Recorta por ancho (sin codigos de color a medias). */

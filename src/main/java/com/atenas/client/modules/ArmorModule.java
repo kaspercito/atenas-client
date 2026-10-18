@@ -31,6 +31,21 @@ public class ArmorModule extends HudModule {
         startEnabled();
     }
 
+    /** Cada cuantos ms se vuelve a leer inventario, durabilidad, textos y anchos (antes se rehacia todo 3 o 4 veces por cuadro). */
+    private static final long REFRESH_MS = 50L;
+
+    // ---- cache (se rellena en refresh(); getWidth/getHeight/draw solo la leen)
+    private long cachedAt = -1000L;
+    private final List<ItemStack> cItems = new ArrayList<ItemStack>(8);
+    private final String[] cLabels = new String[8];
+    private final int[] cColors = new int[8];
+    private final boolean[] cWarn = new boolean[8];
+    private int cW = 26, cH = 22, cCell = 20, cLabelW;
+    private boolean cHorizontal;
+    /** Objetos de muestra del Editor HUD y pila de flechas: se crean una vez, no en cada cuadro. */
+    private ItemStack[] demo;
+    private ItemStack demoArrows, arrowStack;
+
     private boolean horizontal() { return layout.index() == 1; }
 
     private static ItemStack damaged(ItemStack s, int dmg) {
@@ -38,18 +53,25 @@ public class ArmorModule extends HudModule {
         return s;
     }
 
-    private List<ItemStack> slots() {
-        List<ItemStack> out = new ArrayList<ItemStack>();
+    private void ensureDemo() {
+        if (demo != null) return;
+        demo = new ItemStack[] {
+            damaged(new ItemStack(Items.diamond_sword), 120), new ItemStack(Items.diamond_helmet),
+            damaged(new ItemStack(Items.diamond_chestplate), 60), damaged(new ItemStack(Items.diamond_leggings), 150),
+            damaged(new ItemStack(Items.diamond_boots), 200)
+        };
+        demoArrows = new ItemStack(Items.arrow, 42);
+        arrowStack = new ItemStack(Items.arrow, 1);
+    }
+
+    private void collect(List<ItemStack> out) {
+        out.clear();
         EntityPlayer p = mc.thePlayer;
         boolean sample = isEditing();
+        if (sample) ensureDemo();
         if (held.bool) out.add(p != null ? p.getCurrentEquippedItem() : null);
         for (int i = 3; i >= 0; i--) out.add(p != null ? p.inventory.armorInventory[i] : null);
         if (sample) {
-            ItemStack[] demo = {
-                damaged(new ItemStack(Items.diamond_sword), 120), new ItemStack(Items.diamond_helmet),
-                damaged(new ItemStack(Items.diamond_chestplate), 60), damaged(new ItemStack(Items.diamond_leggings), 150),
-                damaged(new ItemStack(Items.diamond_boots), 200)
-            };
             int off = held.bool ? 0 : 1;
             for (int i = 0; i < out.size(); i++) if (out.get(i) == null) out.set(i, demo[i + off]);
         }
@@ -59,11 +81,14 @@ public class ArmorModule extends HudModule {
         if (arrows.bool && p != null && p.getCurrentEquippedItem() != null && p.getCurrentEquippedItem().getItem() instanceof ItemBow) {
             int n = 0;
             for (ItemStack st : p.inventory.mainInventory) if (st != null && st.getItem() == Items.arrow) n += st.stackSize;
-            if (n > 0) out.add(new ItemStack(Items.arrow, n));
+            if (n > 0) {
+                ensureDemo();
+                arrowStack.stackSize = n;
+                out.add(arrowStack);
+            }
         } else if (arrows.bool && sample) {
-            out.add(new ItemStack(Items.arrow, 42));
+            out.add(demoArrows);
         }
-        return out;
     }
 
     private String label(ItemStack s) {
@@ -78,77 +103,96 @@ public class ArmorModule extends HudModule {
         return null;
     }
 
-    private int labelColor(ItemStack s) {
+    /** Color base del texto (verde a rojo segun lo que queda). El parpadeo blanco se decide al dibujar, con cWarn. */
+    private int baseColor(ItemStack s) {
         if (!s.isItemStackDamageable()) return color.getColor();
         int max = Math.max(1, s.getMaxDamage());
         float frac = Math.max(0f, (float) (max - s.getItemDamage()) / max);
-        if (warn.bool && frac <= 0.10f && (System.currentTimeMillis() / 300L) % 2L == 0L) return 0xFFFFFFFF;
         return Color.HSBtoRGB(frac * 0.33f, 0.9f, 1f);
     }
 
-    private int maxLabelWidth(List<ItemStack> l) {
-        int w = 0;
-        for (ItemStack s : l) {
-            if (s == null) continue;
+    private boolean lowDurability(ItemStack s) {
+        if (!warn.bool || !s.isItemStackDamageable()) return false;
+        int max = Math.max(1, s.getMaxDamage());
+        return (float) (max - s.getItemDamage()) / max <= 0.10f;
+    }
+
+    private void refresh() {
+        long now = System.currentTimeMillis();
+        if (now - cachedAt < REFRESH_MS && now >= cachedAt) return;
+        cachedAt = now;
+
+        collect(cItems);
+        int n = Math.min(cItems.size(), cLabels.length);
+        int maxW = 0;
+        for (int i = 0; i < n; i++) {
+            ItemStack s = cItems.get(i);
+            if (s == null) { cLabels[i] = null; continue; }
             String t = label(s);
-            if (t != null) w = Math.max(w, mc.fontRendererObj.getStringWidth(t));
+            cLabels[i] = t;
+            cColors[i] = baseColor(s);
+            cWarn[i] = lowDurability(s);
+            if (t != null) maxW = Math.max(maxW, mc.fontRendererObj.getStringWidth(t));
         }
-        return w;
+        cLabelW = maxW;
+        cHorizontal = horizontal();
+        cCell = Math.max(20, maxW + 4);
+        int count = Math.max(1, cItems.size());
+        if (cHorizontal) {
+            cW = count * cCell + 4;
+            cH = 22 + (maxW > 0 ? 10 : 0);
+        } else {
+            cW = maxW > 0 ? Math.max(34, 25 + maxW + 6) : 26;
+            cH = count * 18 + 4;
+        }
     }
-
-    private int cell(List<ItemStack> l) { return Math.max(20, maxLabelWidth(l) + 4); }
 
     @Override
-    public int getWidth() {
-        List<ItemStack> l = slots();
-        int n = Math.max(1, l.size());
-        if (horizontal()) return n * cell(l) + 4;
-        int tw = maxLabelWidth(l);
-        return tw > 0 ? Math.max(34, 25 + tw + 6) : 26;
-    }
+    public int getWidth() { refresh(); return cW; }
 
     @Override
-    public int getHeight() {
-        List<ItemStack> l = slots();
-        int n = Math.max(1, l.size());
-        if (horizontal()) return 22 + (maxLabelWidth(l) > 0 ? 10 : 0);
-        return n * 18 + 4;
-    }
+    public int getHeight() { refresh(); return cH; }
 
     @Override
     protected void draw() {
-        List<ItemStack> l = slots();
-        box(getWidth(), getHeight());
-        int cell = cell(l);
-        for (int i = 0; i < l.size(); i++) {
-            ItemStack s = l.get(i);
+        refresh();
+        int count = Math.min(cItems.size(), cLabels.length);
+        box(cW, cH);
+        final boolean hor = cHorizontal;
+        final int cell = cCell;
+
+        // pasada 1: objetos (la iluminacion de GUI se activa una sola vez, como en la barra de vanilla)
+        RenderHelper.enableGUIStandardItemLighting();
+        for (int i = 0; i < count; i++) {
+            ItemStack s = cItems.get(i);
             if (s == null) continue;
             int ix, iy;
-            if (horizontal()) { ix = 2 + i * cell + (cell - 16) / 2; iy = 3; }
+            if (hor) { ix = 2 + i * cell + (cell - 16) / 2; iy = 3; }
             else { ix = 5; iy = 2 + i * 18; }
-            GlStateManager.pushMatrix();
-            RenderHelper.enableGUIStandardItemLighting();
             mc.getRenderItem().renderItemAndEffectIntoGUI(s, ix, iy);
             if (bar.bool && s.isItemStackDamageable()) {
                 mc.getRenderItem().renderItemOverlayIntoGUI(mc.fontRendererObj, s, ix, iy, "");
             }
-            RenderHelper.disableStandardItemLighting();
-            GlStateManager.popMatrix();
-            GlStateManager.disableLighting();
-            GlStateManager.enableAlpha();
-            GlStateManager.disableDepth();
-            String t = label(s);
-            if (t != null) {
-                int c = labelColor(s);
-                if (horizontal()) {
-                    int tw = mc.fontRendererObj.getStringWidth(t);
-                    mc.fontRendererObj.drawString(t, 2 + i * cell + (cell - tw) / 2, 21, c, shadow.bool);
-                } else {
-                    mc.fontRendererObj.drawString(t, 25, iy + 4, c, shadow.bool);
-                }
-            }
-            GlStateManager.enableDepth();
         }
+        RenderHelper.disableStandardItemLighting();
+
+        // pasada 2: textos
+        GlStateManager.disableLighting();
+        GlStateManager.enableAlpha();
+        GlStateManager.disableDepth();
+        boolean flash = (System.currentTimeMillis() / 300L) % 2L == 0L;
+        for (int i = 0; i < count; i++) {
+            String t = cLabels[i];
+            if (t == null || cItems.get(i) == null) continue;
+            int c = (cWarn[i] && flash) ? 0xFFFFFFFF : cColors[i];
+            if (hor) {
+                int tw = mc.fontRendererObj.getStringWidth(t);
+                mc.fontRendererObj.drawString(t, 2 + i * cell + (cell - tw) / 2, 21, c, shadow.bool);
+            } else {
+                mc.fontRendererObj.drawString(t, 25, 2 + i * 18 + 4, c, shadow.bool);
+            }
+        }
+        GlStateManager.enableDepth();
         GlStateManager.color(1f, 1f, 1f, 1f);
     }
 }

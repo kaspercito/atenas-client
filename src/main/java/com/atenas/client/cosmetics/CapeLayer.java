@@ -10,6 +10,8 @@ import net.minecraft.util.MathHelper;
 public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
     private final RenderPlayer renderer;
     private final CapeModel model = new CapeModel();
+    /** A mas de 16 bloques (256 al cuadrado) la capa se dibuja con menos detalle: no se nota y son muchos menos vertices. */
+    private static final double FAR_SQ = 16.0 * 16.0;
 
     public CapeLayer(RenderPlayer renderer) { this.renderer = renderer; }
 
@@ -20,6 +22,8 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
         if (p.isInvisible()) return;
         Cosmetics.Item item = Cosmetics.of(p, Cosmetics.Type.CAPE);
         if (item == null || !Cosmetics.inRange(p)) return;
+
+        final boolean far = p != mc.thePlayer && mc.thePlayer != null && p.getDistanceSqToEntity(mc.thePlayer) > FAR_SQ;
 
         mc.getTextureManager().bindTexture(item.texture);
         GlStateManager.color(1f, 1f, 1f, 1f);
@@ -62,12 +66,12 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
             GlStateManager.translate(0f, (float) f / item.frames, 0f);
             GlStateManager.scale(1f, 1f / item.frames, 1f);
             GlStateManager.matrixMode(5888); // GL_MODELVIEW
-            model.renderChain(0.0625f, bend, amp, age, (float) Math.toRadians(sway / 4f));
+            model.renderChain(0.0625f, bend, amp, age, (float) Math.toRadians(sway / 4f), far);
             GlStateManager.matrixMode(5890);
             GlStateManager.popMatrix();
             GlStateManager.matrixMode(5888);
         } else {
-            model.renderChain(0.0625f, bend, amp, age, (float) Math.toRadians(sway / 4f));
+            model.renderChain(0.0625f, bend, amp, age, (float) Math.toRadians(sway / 4f), far);
         }
         GlStateManager.popMatrix();
     }

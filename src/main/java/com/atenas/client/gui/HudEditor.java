@@ -36,6 +36,7 @@ public class HudEditor extends GuiScreen {
 
     @Override
     public void drawScreen(int mx, int my, float pt) {
+        Draw.batchBegin(); // fondo, rejilla y ejes: formas lisas, una sola llamada de dibujo
         Draw.rect(0, 0, width, height, 0x80050813);
         // rejilla tenue cada 20 px
         for (int gx = 0; gx < width; gx += 20) Draw.rect(gx, 0, 1, height, 0x0F22D3EE);
@@ -44,6 +45,7 @@ public class HudEditor extends GuiScreen {
         int axis = dragged != null ? 0x6022D3EE : 0x2822D3EE;
         Draw.rect(width / 2, 0, 1, height, axis);
         Draw.rect(0, height / 2, width, 1, axis);
+        Draw.batchEnd();
         ScaledResolution sr = new ScaledResolution(mc);
         HudModule over = hovered(mx, my);
         boolean any = false;

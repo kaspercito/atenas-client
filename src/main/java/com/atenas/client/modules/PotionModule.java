@@ -34,20 +34,38 @@ public class PotionModule extends HudModule {
         startEnabled();
     }
 
-    private List<PotionEffect> effects() {
-        List<PotionEffect> out = new ArrayList<PotionEffect>();
+    /** Cada cuantos ms se vuelven a leer los efectos, sus textos y anchos (antes: lista nueva, nombres y tiempos nuevos 3 veces por cuadro). */
+    private static final long REFRESH_MS = 100L;
+    private static final int MAX_ROWS = 32;
+
+    private static final Comparator<PotionEffect> BY_TIME = new Comparator<PotionEffect>() {
+        @Override public int compare(PotionEffect a, PotionEffect b) { return a.getDuration() - b.getDuration(); }
+    };
+
+    // ---- cache
+    private long cachedAt = -1000L;
+    private final List<PotionEffect> cEffects = new ArrayList<PotionEffect>();
+    private final String[] cNames = new String[MAX_ROWS], cTimes = new String[MAX_ROWS];
+    private final int[] cLeft = new int[MAX_ROWS], cIcon = new int[MAX_ROWS];
+    private final boolean[] cBad = new boolean[MAX_ROWS];
+    private int cRows, cW = 60, cH = 4 + ROW;
+    private boolean cCompact, cIcons;
+    private PotionEffect demoSpeed, demoStrength, demoRegen;
+
+    private void collect(List<PotionEffect> out) {
+        out.clear();
         if (mc.thePlayer != null) out.addAll(mc.thePlayer.getActivePotionEffects());
         if (out.isEmpty() && isEditing()) {
-            out.add(new PotionEffect(Potion.moveSpeed.id, 1830, 1));
-            out.add(new PotionEffect(Potion.damageBoost.id, 190, 0));
-            out.add(new PotionEffect(Potion.regeneration.id, 620, 2));
+            if (demoSpeed == null) {
+                demoSpeed = new PotionEffect(Potion.moveSpeed.id, 1830, 1);
+                demoStrength = new PotionEffect(Potion.damageBoost.id, 190, 0);
+                demoRegen = new PotionEffect(Potion.regeneration.id, 620, 2);
+            }
+            out.add(demoSpeed);
+            out.add(demoStrength);
+            out.add(demoRegen);
         }
-        if (sort.bool) {
-            Collections.sort(out, new Comparator<PotionEffect>() {
-                @Override public int compare(PotionEffect a, PotionEffect b) { return a.getDuration() - b.getDuration(); }
-            });
-        }
-        return out;
+        if (sort.bool && out.size() > 1) Collections.sort(out, BY_TIME);
     }
 
     private static String level(int amplifier) {
@@ -58,56 +76,74 @@ public class PotionModule extends HudModule {
 
     private String name(PotionEffect e) { return I18n.format(e.getEffectName()) + level(e.getAmplifier()); }
 
-    private boolean compact() { return style.index() == 1; }
+    private void refresh() {
+        long now = System.currentTimeMillis();
+        if (now - cachedAt < REFRESH_MS && now >= cachedAt) return;
+        cachedAt = now;
 
-    @Override
-    public int getWidth() {
+        collect(cEffects);
+        cCompact = style.index() == 1;
+        cIcons = icons.bool;
+        cRows = Math.min(cEffects.size(), MAX_ROWS);
         int w = 60;
-        for (PotionEffect e : effects()) {
+        for (int i = 0; i < cRows; i++) {
+            PotionEffect e = cEffects.get(i);
+            Potion p = e.getPotionID() >= 0 && e.getPotionID() < Potion.potionTypes.length ? Potion.potionTypes[e.getPotionID()] : null;
             String time = Potion.getDurationString(e);
+            cTimes[i] = time;
+            cNames[i] = cCompact ? null : name(e);
+            cLeft[i] = e.getDuration();
+            cBad[i] = p != null && p.isBadEffect();
+            cIcon[i] = (p != null && p.hasStatusIcon()) ? p.getStatusIconIndex() : -1;
             int tw = mc.fontRendererObj.getStringWidth(time);
-            if (!compact()) tw = Math.max(tw, mc.fontRendererObj.getStringWidth(name(e)));
-            w = Math.max(w, (icons.bool ? 25 : 7) + tw + 8);
+            if (!cCompact) tw = Math.max(tw, mc.fontRendererObj.getStringWidth(cNames[i]));
+            w = Math.max(w, (cIcons ? 25 : 7) + tw + 8);
         }
-        return w;
+        cW = w;
+        cH = 4 + Math.max(1, cEffects.size()) * ROW;
     }
 
     @Override
-    public int getHeight() { return 4 + Math.max(1, effects().size()) * ROW; }
+    public int getWidth() { refresh(); return cW; }
+
+    @Override
+    public int getHeight() { refresh(); return cH; }
 
     @Override
     protected void draw() {
-        List<PotionEffect> list = effects();
-        if (list.isEmpty()) return;
-        box(getWidth(), getHeight());
-        long now = System.currentTimeMillis();
-        for (int i = 0; i < list.size(); i++) {
-            PotionEffect e = list.get(i);
-            int y = 2 + i * ROW;
-            Potion p = e.getPotionID() >= 0 && e.getPotionID() < Potion.potionTypes.length ? Potion.potionTypes[e.getPotionID()] : null;
-            int tx = 6;
-            if (icons.bool) {
-                if (p != null && p.hasStatusIcon()) {
+        refresh();
+        if (cRows == 0) return;
+        box(cW, cH);
+        // pasada 1: iconos (la textura del inventario se enlaza una sola vez, antes de escribir ningun texto)
+        if (cIcons) {
+            boolean bound = false;
+            for (int i = 0; i < cRows; i++) {
+                if (cIcon[i] < 0) continue;
+                if (!bound) {
                     mc.getTextureManager().bindTexture(INVENTORY);
                     GlStateManager.color(1f, 1f, 1f, 1f);
                     GlStateManager.enableBlend();
-                    int idx = p.getStatusIconIndex();
-                    Draw.texRect(4, y, idx % 8 * 18, 198 + idx / 8 * 18, 18, 18);
+                    bound = true;
                 }
-                tx = 25;
+                int idx = cIcon[i];
+                Draw.texRect(4, 2 + i * ROW, idx % 8 * 18, 198 + idx / 8 * 18, 18, 18);
             }
-            int left = e.getDuration();
-            boolean ending = left <= 200;                         // 10 segundos
+        }
+        // pasada 2: textos
+        boolean flash = (System.currentTimeMillis() / 300L) % 2L == 0L;
+        int tx = cIcons ? 25 : 6;
+        for (int i = 0; i < cRows; i++) {
+            int y = 2 + i * ROW;
+            int left = cLeft[i];
             int timeColor = color.getColor();
             if (tint.bool) timeColor = left <= 200 ? 0xFFFF5555 : left <= 600 ? 0xFFFBBF24 : color.getColor();
-            if (blink.bool && ending && (now / 300L) % 2L == 0L) timeColor = 0xFFFFFFFF;
-            int nameColor = (p != null && p.isBadEffect()) ? 0xFFFF7777 : color.getColor();
-            String time = Potion.getDurationString(e);
-            if (compact()) {
-                mc.fontRendererObj.drawString(time, tx, y + 5, timeColor, shadow.bool);
+            if (blink.bool && left <= 200 && flash) timeColor = 0xFFFFFFFF;   // 200 ticks = 10 segundos
+            if (cCompact) {
+                mc.fontRendererObj.drawString(cTimes[i], tx, y + 5, timeColor, shadow.bool);
             } else {
-                mc.fontRendererObj.drawString(name(e), tx, y + 1, nameColor, shadow.bool);
-                mc.fontRendererObj.drawString(time, tx, y + 10, timeColor, shadow.bool);
+                int nameColor = cBad[i] ? 0xFFFF7777 : color.getColor();
+                mc.fontRendererObj.drawString(cNames[i], tx, y + 1, nameColor, shadow.bool);
+                mc.fontRendererObj.drawString(cTimes[i], tx, y + 10, timeColor, shadow.bool);
             }
         }
         GlStateManager.color(1f, 1f, 1f, 1f);

@@ -63,8 +63,8 @@ public final class Lang {
         p("Cambia el contorno del bloque que miras: color, grosor y relleno.",
           "Changes the outline of the block you look at: color, thickness and fill.");
         p("Chat", "Chat");
-        p("Mejoras del chat: hora en cada mensaje, copiar mensajes con clic derecho, sin fondo, animación suave e historial infinito.",
-          "Chat improvements: timestamps, copy messages with right click, no background, smooth animation and unlimited history.");
+        p("Mejoras del chat: hora en cada mensaje, copiar mensajes con clic derecho, sin fondo, animación suave e historial largo (hasta 20 000 líneas).",
+          "Chat improvements: timestamps, copy messages with right click, no background, smooth animation and a long history (up to 20,000 lines).");
         p("Reloj", "Clock");
         p("Muestra la hora real de tu PC.", "Shows your computer's real time.");
         p("Combo", "Combo");
@@ -92,8 +92,8 @@ public final class Lang {
         p("Animaciones 1.7", "1.7 Animations");
         p("Todas las animaciones 1.7 juntas: balanceo al bloquear con la espada, comer/beber y usar el arco, y golpear bloques mientras usas el objeto.",
           "All the 1.7 animations together: swing while blocking with the sword, eating/drinking and using the bow, and hitting blocks while using an item.");
-        p("Más FPS en granjas y zonas con muchos mobs: no dibuja los mobs que están lejos (los jugadores siempre se ven). Los gráficos los maneja OptiFine.",
-          "More FPS in farms and mob-heavy areas: mobs far away are not drawn (players are always shown). Graphics are handled by OptiFine.");
+        p("Más FPS en granjas, lobbies y zonas con muchos mobs: no dibuja los mobs ni los hologramas que están lejos (los jugadores y sus nombres siempre se ven). Los gráficos los maneja OptiFine.",
+          "More FPS in farms, lobbies and mob-heavy areas: mobs and holograms far away are not drawn (players and their names are always shown). Graphics are handled by OptiFine.");
         p("Perspective", "Perspective");
         p("Mantén la tecla (Alt izquierdo por defecto) para mirar alrededor de tu personaje sin girarlo. Al soltarla vuelve tu vista de antes.",
           "Hold the key (Left Alt by default) to look around your character without turning it. Releasing it restores your previous view.");
@@ -144,6 +144,8 @@ public final class Lang {
         p("Separación dinámica (se abre al moverte/saltar)", "Dynamic gap (opens when you move/jump)");
         p("Cambiar de color al apuntar a una entidad", "Change color when aiming at an entity");
         p("Color al apuntar", "Color when aiming");
+        p("Ocultar mobs lejanos (bloques, 0 = no)", "Hide distant mobs (blocks, 0 = off)");
+        p("Ocultar hologramas lejanos (bloques, 0 = no)", "Hide distant holograms (blocks, 0 = off)");
         p("Mostrar CPS", "Show CPS");
         p("Barra espaciadora", "Space bar");
         p("Sprint automático", "Auto sprint");
@@ -182,7 +184,7 @@ public final class Lang {
         // chat
         p("Hora en cada mensaje", "Timestamp on every message");
         p("Formato 24 horas", "24-hour format");
-        p("Chat infinito", "Unlimited chat history");
+        p("Chat infinito", "Long chat history (20,000 lines)");
         p("Copiar con clic derecho", "Copy with right click");
         p("Copiar sin la hora", "Copy without the timestamp");
         p("Sin fondo", "No background");

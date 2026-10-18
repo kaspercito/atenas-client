@@ -23,10 +23,11 @@ public class CapeModel {
     /** Punto de cada articulacion (en la cara de adentro, que es la linea del pivote) y su orientacion 3x3 (por filas). */
     private final float[][] pos = new float[SEGS + 1][3];
     private final float[][] rot = new float[SEGS + 1][9];
-    private float[] seg = identity();
-    private final float[] tmp = new float[9], tmp2 = new float[9];
+    /** Matrices de trabajo: se reservan UNA vez (antes build() y compose() hacian new float[9] varias decenas de veces por capa y por cuadro). */
+    private final float[] tmp = new float[9], tmp2 = new float[9], zx = new float[9], orient = new float[9], nextOrient = new float[9];
 
-    private static float[] identity() { return new float[] {1, 0, 0, 0, 1, 0, 0, 0, 1}; }
+    /** Capa lejana: se dibuja una fila de cada tantas (ver CapeLayer, a mas de 16 bloques). */
+    public static final int FAR_ROW_STEP = 4;
 
     /** out = a * b (matrices 3x3 por filas). */
     private static void mul(float[] a, float[] b, float[] out) {
@@ -55,15 +56,15 @@ public class CapeModel {
     private void compose(float[] parent, float z, float x, float[] out) {
         rotZ(z, tmp);
         rotX(x, tmp2);
-        float[] zx = new float[9];
         mul(tmp, tmp2, zx);
         mul(parent, zx, out);
     }
 
     /** Calcula articulaciones segun los giros ya cargados en rx / rz. */
     private void build() {
-        float[] o = identity();
-        float[] next = new float[9];
+        float[] o = orient;
+        float[] next = nextOrient;
+        o[0] = 1; o[1] = 0; o[2] = 0; o[3] = 0; o[4] = 1; o[5] = 0; o[6] = 0; o[7] = 0; o[8] = 1;
         float px = 0f, py = 0f, pz = 0f;
         for (int s = 0; s < SEGS; s++) {
             pos[s][0] = px; pos[s][1] = py; pos[s][2] = pz;
@@ -95,16 +96,25 @@ public class CapeModel {
         wr.pos(x * scale, y * scale, z * scale).tex(u / 64f, v / 32f).normal(tx, ty, tz).endVertex();
     }
 
-    /** Pone la capa en su pose (ver {@link CapeWave#angles}) y la dibuja. */
+    /** Pone la capa en su pose (ver {@link CapeWave#angles}) y la dibuja con todo el detalle. */
     public void renderChain(float scale, float bend, float amp, float time, float side) {
+        renderChain(scale, bend, amp, time, side, false);
+    }
+
+    /**
+     * @param far true = capa lejana: la misma pose, pero la malla usa una fila de cada {@link #FAR_ROW_STEP} (4 en vez de 16) y no
+     *            dibuja los cantos de 1 px (a mas de 16 bloques no se distinguen). Son ~85 % menos vertices por capa.
+     */
+    public void renderChain(float scale, float bend, float amp, float time, float side, boolean far) {
         CapeWave.angles(bend, amp, time, side, rx, rz);
         build();
 
         Tessellator t = Tessellator.getInstance();
         WorldRenderer wr = t.getWorldRenderer();
         wr.begin(7, DefaultVertexFormats.POSITION_TEX_NORMAL); // 7 = GL_QUADS
-        for (int r = 0; r < SEGS; r++) {
-            int a = r, b = r + 1;
+        final int step = far ? FAR_ROW_STEP : 1;
+        for (int r = 0; r < SEGS; r += step) {
+            int a = r, b = Math.min(SEGS, r + step);
             float va = 1f + r * CapeWave.SEG_H, vb = 1f + b * CapeWave.SEG_H;
             // cara de afuera (la que se ve desde atras): u 1..11, normal hacia afuera (-z del marco)
             vtx(wr, a, -HALF_W, -DEPTH, 1f, va, 0, 0, -1, scale);
@@ -116,6 +126,7 @@ public class CapeModel {
             vtx(wr, a, HALF_W, 0f, 12f, va, 0, 0, 1, scale);
             vtx(wr, b, HALF_W, 0f, 12f, vb, 0, 0, 1, scale);
             vtx(wr, b, -HALF_W, 0f, 22f, vb, 0, 0, 1, scale);
+            if (far) continue;
             // canto izquierdo y derecho (1 de grueso)
             vtx(wr, a, -HALF_W, -DEPTH, 1f, va, -1, 0, 0, scale);
             vtx(wr, a, -HALF_W, 0f, 0f, va, -1, 0, 0, scale);

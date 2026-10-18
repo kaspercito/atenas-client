@@ -10,6 +10,9 @@ public class MemoryModule extends TextHud {
     }
 
     @Override
+    protected long refreshMs() { return 500L; }
+
+    @Override
     protected String getText() {
         Runtime r = Runtime.getRuntime();
         long used = (r.totalMemory() - r.freeMemory()) / 1048576L;

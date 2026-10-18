@@ -1,7 +1,6 @@
 package com.atenas.client.gui;
 
 import java.io.IOException;
-import java.util.Random;
 
 import org.lwjgl.input.Keyboard;
 
@@ -25,16 +24,10 @@ import net.minecraft.client.gui.GuiSelectWorld;
  */
 public class AtenasMainMenu extends GuiScreen {
 
-    private static final int STARS = 110;
     private static final int ID_SINGLE = 0, ID_MULTI = 1, ID_MODS = 2, ID_OPTIONS = 3, ID_CLOSE = 4, ID_FRIENDS = 5, ID_ACCOUNT = 6;
     private static final int FOOTER = 46;        // franja inferior reservada en pantallas normales (version, atajo, cuenta)
     private static final int FOOTER_TIGHT = 26;  // y en ventanas bajitas (todo en una sola linea)
     private static final int TIGHT_BELOW = 300;  // alto (en pixeles de GUI) por debajo del cual se usa la franja chica
-
-    private final float[] sx = new float[STARS];
-    private final float[] sy = new float[STARS];
-    private final float[] sv = new float[STARS];
-    private final float[] ss = new float[STARS];
 
     // medidas del bloque central (las llena layout())
     private boolean tight;           // ventana baja: franja inferior de una linea y ficha de cuenta de una linea
@@ -44,16 +37,6 @@ public class AtenasMainMenu extends GuiScreen {
     // la "ficha" de la cuenta, abajo a la derecha (clic = cambiar de cuenta)
     private int chipX, chipY, chipW, chipH;
     private MenuButton friendsBtn;
-
-    public AtenasMainMenu() {
-        Random r = new Random(1234L);
-        for (int i = 0; i < STARS; i++) {
-            sx[i] = r.nextFloat();
-            sy[i] = r.nextFloat();
-            sv[i] = 0.2f + r.nextFloat() * 0.8f;
-            ss[i] = r.nextFloat();
-        }
-    }
 
     @Override
     public boolean doesGuiPauseGame() { return false; }
@@ -151,40 +134,7 @@ public class AtenasMainMenu extends GuiScreen {
     @Override
     public void drawScreen(int mx, int my, float pt) {
         long t = System.currentTimeMillis();
-        Draw.gradient(0, 0, width, height, 0xFF080A14, 0xFF171C3C, true);
-
-        // resplandor del horizonte y rejilla en perspectiva
-        int hz = height - 90;
-        Draw.gradient(0, hz - 40, width, 40, 0x008B5CF6, 0x268B5CF6, true);
-        Draw.rect(0, hz, width, height - hz, 0xFF070913);
-        Draw.rect(0, hz, width, 1, 0x808B5CF6);
-        for (int i = 1; i < 7; i++) {
-            float k = (float) Math.pow((i + (t % 2000) / 2000f) / 7f, 2.0);
-            int yy = hz + (int) (k * (height - hz));
-            Draw.rect(0, yy, width, 1, ((int) (60 * k) + 14 << 24) | 0x8B5CF6);
-        }
-        for (int i = -10; i <= 10; i++) {
-            int bx = width / 2 + i * (width / 14);
-            int ex = width / 2 + i * (width / 3);
-            int steps = 12;
-            for (int s = 0; s < steps; s++) {
-                float a0 = s / (float) steps;
-                int px = bx + (int) ((ex - bx) * a0);
-                int py = hz + (int) ((height - hz) * a0);
-                Draw.rect(px, py, 1, (height - hz) / steps + 1, ((int) (10 + 40 * a0) << 24) | 0x8B5CF6);
-            }
-        }
-
-        for (int i = 0; i < STARS; i++) {
-            float yy = (sy[i] * hz + t * sv[i] * 0.003f) % hz;
-            int a = (int) (50 + 110 * (0.5 + 0.5 * Math.sin(t * 0.002 + i)));
-            int size = ss[i] > 0.8f ? 2 : 1;
-            Draw.rect((int) (sx[i] * width), (int) yy, size, size, (a << 24) | 0xFFFFFF);
-        }
-
-        // linea de escaneo
-        int scan = (int) ((t / 14) % (height + 80)) - 40;
-        Draw.gradient(0, scan, width, 14, 0x008B5CF6, 0x128B5CF6, true);
+        Backdrop.render(width, height); // fondo animado en una sola llamada de dibujo
 
         // marca: logo con pulso, nombre y subtitulo
         int nameY = top;
@@ -209,6 +159,7 @@ public class AtenasMainMenu extends GuiScreen {
         super.drawScreen(mx, my, pt);
 
         // greca dorada arriba y esquinas HUD (arriba a la derecha va la X; abajo a la derecha va la ficha de la cuenta)
+        Draw.batchBegin();
         for (int gx = 0; gx + 12 <= width; gx += 12) {
             int ga = 0x558B5CF6;
             Draw.rect(gx, 3, 8, 1, ga); Draw.rect(gx, 3, 1, 6, ga); Draw.rect(gx, 8, 5, 1, ga); Draw.rect(gx + 4, 5, 1, 3, ga);
@@ -216,6 +167,7 @@ public class AtenasMainMenu extends GuiScreen {
         int c = 0xAA8B5CF6;
         Draw.rect(8, 14, 22, 1, c); Draw.rect(8, 14, 1, 22, c);
         Draw.rect(8, height - 9, 22, 1, c); Draw.rect(8, height - 30, 1, 22, c);
+        Draw.batchEnd();
 
         // pie: version (izquierda), atajo (centro), cuenta (derecha). Cada pieza se dibuja solo si cabe sin pisar a la otra.
         int fy = tight ? height - 20 : height - 22;

@@ -13,5 +13,8 @@ public class ClockModule extends TextHud {
     }
 
     @Override
+    protected long refreshMs() { return 1000L; }
+
+    @Override
     protected String getText() { return format.format(new Date()); }
 }

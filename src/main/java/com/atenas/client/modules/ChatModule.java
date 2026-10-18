@@ -29,6 +29,9 @@ import net.minecraftforge.fml.relauncher.ReflectionHelper;
  * El fondo y la animacion los aplica MixinGuiNewChat leyendo este mod.
  */
 public class ChatModule extends Module {
+    /** Tope del historial con "Chat infinito" (lineas y mensajes). Antes no tenia tope y crecia sin limite. Vanilla: 100. */
+    public static final int MAX_LINES = 20000;
+
     private final Setting stamp, h24, copy, copyNoTime, noBg, anim, animMs, endless;
     private long lastMessage;
 
@@ -46,7 +49,7 @@ public class ChatModule extends Module {
     }
 
     public ChatModule() {
-        super("Chat", "Mejoras del chat: hora en cada mensaje, copiar mensajes con clic derecho, sin fondo, animación suave e historial infinito.", Category.CHAT);
+        super("Chat", "Mejoras del chat: hora en cada mensaje, copiar mensajes con clic derecho, sin fondo, animación suave e historial largo (hasta 20 000 líneas).", Category.CHAT);
         stamp = addBool("Hora en cada mensaje", true);
         h24 = addBool("Formato 24 horas", true);
         endless = addBool("Chat infinito", true);
@@ -77,7 +80,7 @@ public class ChatModule extends Module {
 
     // ---- lo que lee el mixin
 
-    /** true = el chat no borra mensajes viejos (vanilla guarda solo los ultimos 100). */
+    /** true = el chat guarda hasta MAX_LINES lineas (vanilla guarda solo las ultimas 100). */
     public boolean keepsAllMessages() { return endless.bool; }
 
     /** true = no dibujar el fondo oscuro de cada linea. */

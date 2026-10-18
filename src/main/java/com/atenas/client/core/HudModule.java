@@ -2,7 +2,7 @@ package com.atenas.client.core;
 
 import com.atenas.client.gui.HudEditor;
 
-import net.minecraft.client.gui.Gui;
+import com.atenas.client.gui.Draw;
 import net.minecraft.client.gui.ScaledResolution;
 import net.minecraft.client.renderer.GlStateManager;
 
@@ -72,11 +72,14 @@ public abstract class HudModule extends Module {
 
     protected void box(int w, int h) {
         if (!background.bool) return;
-        Gui.drawRect(0, 0, w, h, 0xB0090812);
-        Gui.drawRect(0, 0, w, 1, 0x30FFFFFF);
+        // fondo + brillo + barra de acento: formas lisas en UNA llamada de dibujo (antes eran 4 o 5)
+        Draw.batchBegin();
+        Draw.rect(0, 0, w, h, 0xB0090812);
+        Draw.rect(0, 0, w, 1, 0x30FFFFFF);
         if (accentBar.bool) {
-            com.atenas.client.gui.Draw.gradient(0, 0, 2, h, 0xFFA78BFA, 0xFFEC4899, true);
-            Gui.drawRect(2, h - 1, Math.min(w - 2, 14), h, 0xFF22D3EE);
+            Draw.gradient(0, 0, 2, h, 0xFFA78BFA, 0xFFEC4899, true);
+            Draw.rect(2, h - 1, Math.max(0, Math.min(w - 2, 14) - 2), 1, 0xFF22D3EE);
         }
+        Draw.batchEnd();
     }
 }

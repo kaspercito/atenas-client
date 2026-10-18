@@ -42,6 +42,7 @@ public abstract class Module {
     public void setEnabled(boolean value) {
         if (value == enabled) return;
         enabled = value;
+        ModuleManager.refreshEnabled();
         if (value) onEnable(); else onDisable();
         Config.save();
     }

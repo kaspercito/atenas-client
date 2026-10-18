@@ -10,9 +10,9 @@ Cliente PvP propio para Minecraft 1.8.9, hecho como mod de Forge. Todo el codigo
 
 **Animaciones (estilo 1.7):** un solo mod `Animaciones 1.7` (espada, comer/beber y arco; mantener clic = balanceo continuo; ahora puedes bloquear con el clic derecho aunque mantengas el izquierdo, y trae la posicion/tamano del objeto en mano).
 
-**Rendimiento (estilo OptiFine):** graficos rapidos, sin nubes, sin sombras de entidades, iluminacion simple, particulas minimas, distancia de render y limite de FPS. Devuelve tus ajustes al apagarlo.
+**Rendimiento:** no dibuja los mobs lejanos (48 bloques por defecto) ni los hologramas lejanos (24 por defecto, siempre mas cerca que los mobs). Los jugadores y sus nombres NUNCA se ocultan. Los graficos los maneja OptiFine. Ademas, los HUD (Armadura, Pociones, Teclas, CPS) guardan sus textos en cache, la mira y las teclas dibujan en una sola llamada, y las capas a mas de 16 bloques se dibujan con menos detalle.
 
-**Chat:** un solo mod `Chat` con hora [HH:mm] en cada mensaje, copiar un mensaje con clic derecho (con o sin la hora), chat sin fondo y animacion suave al llegar un mensaje (duracion ajustable) y chat infinito (no borra los mensajes viejos; vanilla guarda solo 100). Aqui tambien esta **Autotext** (tecla **o boton del mouse** -> mensaje/comando; se edita dentro del menu: Mods > Autotext > engranaje).
+**Chat:** un solo mod `Chat` con hora [HH:mm] en cada mensaje, copiar un mensaje con clic derecho (con o sin la hora), chat sin fondo y animacion suave al llegar un mensaje (duracion ajustable) y chat largo (guarda hasta 20 000 lineas; vanilla guarda solo 100). Aqui tambien esta **Autotext** (tecla **o boton del mouse** -> mensaje/comando; se edita dentro del menu: Mods > Autotext > engranaje).
 
 **Utilidades:** Perspective, Fullbright y Hora (fija la hora del mundo solo para ti). El Zoom se quito: lo trae OptiFine.
 

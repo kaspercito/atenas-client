@@ -26,7 +26,58 @@ public final class Draw {
     }
 
     public static void rect(int x, int y, int w, int h, int color) {
+        if (batching) { batchFill(x, y, x + w, y + h, color); return; }
         Gui.drawRect(x, y, x + w, y + h, color);
+    }
+
+    // ------------------------------------------------------------ dibujo por lotes
+    // Gui.drawRect abre y cierra el Tessellator (y cambia el estado de GL) en CADA rectangulo. Entre batchBegin() y batchEnd()
+    // rect(), gradient(), chamfer(), border()... solo agregan vertices y todo sale en UNA llamada de dibujo. Dentro del lote NO se
+    // puede dibujar texto ni texturas (compartiria el buffer): primero las formas, luego el texto.
+    private static boolean batching;
+    private static Tessellator batchTess;
+    private static WorldRenderer batchWr;
+
+    public static void batchBegin() {
+        if (batching) return;
+        GlStateManager.disableTexture2D();
+        GlStateManager.enableBlend();
+        GlStateManager.disableAlpha();
+        GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
+        GlStateManager.shadeModel(7425);
+        batchTess = Tessellator.getInstance();
+        batchWr = batchTess.getWorldRenderer();
+        batchWr.begin(7, DefaultVertexFormats.POSITION_COLOR);
+        batching = true;
+    }
+
+    public static void batchEnd() {
+        if (!batching) return;
+        batching = false;
+        batchTess.draw();
+        GlStateManager.shadeModel(7424);
+        GlStateManager.disableBlend();
+        GlStateManager.enableAlpha();
+        GlStateManager.enableTexture2D();
+    }
+
+    /** Rectangulo liso (x1,y1)-(x2,y2) dentro de un lote (mismos vertices y orden que Gui.drawRect). */
+    public static void batchFill(int x1, int y1, int x2, int y2, int argb) {
+        if (x1 > x2) { int t = x1; x1 = x2; x2 = t; }
+        if (y1 > y2) { int t = y1; y1 = y2; y2 = t; }
+        batchQuad(x1, y1, x2, y1, x2, y2, x1, y2, argb, argb, argb, argb);
+    }
+
+    /**
+     * Cuadrilatero de colores por vertice dentro de un lote. Orden: arriba-izquierda, arriba-derecha, abajo-derecha, abajo-izquierda
+     * (el degradado lo interpola GL; con dos colores iguales por lado sale un degradado normal).
+     */
+    public static void batchQuad(float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, int c1, int c2, int c3, int c4) {
+        WorldRenderer wr = batchWr;
+        wr.pos(x4, y4, 0).color(c4 >> 16 & 255, c4 >> 8 & 255, c4 & 255, c4 >>> 24).endVertex();
+        wr.pos(x3, y3, 0).color(c3 >> 16 & 255, c3 >> 8 & 255, c3 & 255, c3 >>> 24).endVertex();
+        wr.pos(x2, y2, 0).color(c2 >> 16 & 255, c2 >> 8 & 255, c2 & 255, c2 >>> 24).endVertex();
+        wr.pos(x1, y1, 0).color(c1 >> 16 & 255, c1 >> 8 & 255, c1 & 255, c1 >>> 24).endVertex();
     }
 
     public static void border(int x, int y, int w, int h, int color) {
@@ -66,6 +117,11 @@ public final class Draw {
     }
 
     public static void gradient(int x, int y, int w, int h, int c1, int c2, boolean vertical) {
+        if (batching) {
+            if (vertical) batchQuad(x, y, x + w, y, x + w, y + h, x, y + h, c1, c1, c2, c2);
+            else batchQuad(x, y, x + w, y, x + w, y + h, x, y + h, c1, c2, c2, c1);
+            return;
+        }
         float a1 = (c1 >> 24 & 255) / 255f, r1 = (c1 >> 16 & 255) / 255f, g1 = (c1 >> 8 & 255) / 255f, b1 = (c1 & 255) / 255f;
         float a2 = (c2 >> 24 & 255) / 255f, r2 = (c2 >> 16 & 255) / 255f, g2 = (c2 >> 8 & 255) / 255f, b2 = (c2 & 255) / 255f;
         GlStateManager.disableTexture2D();
@@ -117,6 +173,7 @@ public final class Draw {
     /** Titulo en mayusculas con letras separadas (look futurista). Los codigos de color del texto original se ignoran. */
     public static void heading(String s, int x, int y, int color) {
         s = stripCodes(Lang.tr(s)).toUpperCase();
+        if (AtenasFont.ready()) { AtenasFont.drawSpaced(s, x, y, color, true); return; } // todas las letras en una sola llamada
         int cx = x;
         for (int i = 0; i < s.length(); i++) {
             String ch = String.valueOf(s.charAt(i));

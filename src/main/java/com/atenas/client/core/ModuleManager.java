@@ -2,7 +2,9 @@ package com.atenas.client.core;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.atenas.client.gui.HudEditor;
 import com.atenas.client.modules.*;
@@ -26,6 +28,11 @@ public final class ModuleManager {
 
     public static final ModuleManager INSTANCE = new ModuleManager();
     private static final List<Module> MODULES = new ArrayList<Module>();
+    // Caches de rendimiento: find() se llama por CADA entidad y varias veces por cuadro (mixins), y los eventos se despachan solo a lo activado.
+    private static final Map<Class<?>, Module> BY_CLASS = new HashMap<Class<?>, Module>();
+    private static List<HudModule> HUDS = Collections.emptyList();
+    private static HudModule[] HUD_ARRAY = new HudModule[0];
+    private static Module[] ENABLED = new Module[0];
     private final Minecraft mc = Minecraft.getMinecraft();
 
     private ModuleManager() {}
@@ -75,6 +82,20 @@ public final class ModuleManager {
         add(new TimeModule(), Module.Category.UTIL);
         add(new BadgeModule(), Module.Category.UTIL);
         add(new ButtonsModule(), Module.Category.UTIL);
+        BY_CLASS.clear();
+        for (Module m : MODULES) BY_CLASS.put(m.getClass(), m);
+        List<HudModule> hs = new ArrayList<HudModule>();
+        for (Module m : MODULES) if (m instanceof HudModule) hs.add((HudModule) m);
+        HUD_ARRAY = hs.toArray(new HudModule[hs.size()]);
+        HUDS = Collections.unmodifiableList(hs);
+        refreshEnabled();
+    }
+
+    /** Vuelve a armar la lista de modulos activos (la llama Module.setEnabled). */
+    static void refreshEnabled() {
+        List<Module> on = new ArrayList<Module>();
+        for (Module m : MODULES) if (m.isEnabled()) on.add(m);
+        ENABLED = on.toArray(new Module[on.size()]);
     }
 
     private static void add(Module m, Module.Category category) {
@@ -84,70 +105,71 @@ public final class ModuleManager {
 
     public static List<Module> all() { return Collections.unmodifiableList(MODULES); }
 
-    /** Busca un modulo por su clase (lo usan los mixins). */
+    /** Busca un modulo por su clase (lo usan los mixins). Busqueda directa en un mapa: antes recorria todos los modulos en cada llamada. */
     public static <T extends Module> T find(Class<T> type) {
-        for (Module m : MODULES) if (type.isInstance(m)) return type.cast(m);
+        Module m = BY_CLASS.get(type);
+        if (m != null) return type.cast(m);
+        for (Module x : MODULES) {
+            if (type.isInstance(x)) { BY_CLASS.put(type, x); return type.cast(x); }
+        }
         return null;
     }
 
-    public static List<HudModule> hud() {
-        List<HudModule> out = new ArrayList<HudModule>();
-        for (Module m : MODULES) if (m instanceof HudModule) out.add((HudModule) m);
-        return out;
-    }
+    /** Los modulos con panel en pantalla (misma lista siempre: no se crea una nueva en cada cuadro). */
+    public static List<HudModule> hud() { return HUDS; }
 
     @SubscribeEvent
     public void onTick(TickEvent.ClientTickEvent e) {
         if (e.phase != TickEvent.Phase.END) return;
         if (mc.thePlayer == null || mc.theWorld == null) return;
-        for (Module m : MODULES) if (m.isEnabled()) m.onTick();
+        for (Module m : ENABLED) m.onTick();
     }
 
     @SubscribeEvent
     public void onKey(InputEvent.KeyInputEvent e) {
         if (!Keyboard.getEventKeyState()) return;
         int key = Keyboard.getEventKey();
-        for (Module m : MODULES) if (m.isEnabled()) m.onKey(key);
+        for (Module m : ENABLED) m.onKey(key);
     }
 
     @SubscribeEvent
     public void onFov(FOVUpdateEvent e) {
-        for (Module m : MODULES) if (m.isEnabled()) m.onFov(e);
+        for (Module m : ENABLED) m.onFov(e);
     }
 
     @SubscribeEvent
     public void onFire(RenderBlockOverlayEvent e) {
-        for (Module m : MODULES) if (m.isEnabled()) m.onFireOverlay(e);
+        for (Module m : ENABLED) m.onFireOverlay(e);
     }
 
     @SubscribeEvent
     public void onRenderHand(RenderHandEvent e) {
-        for (Module m : MODULES) if (m.isEnabled()) m.onRenderHand(e);
+        for (Module m : ENABLED) m.onRenderHand(e);
     }
 
     @SubscribeEvent
     public void onChat(ClientChatReceivedEvent e) {
-        for (Module m : MODULES) if (m.isEnabled()) m.onChat(e);
+        for (Module m : ENABLED) m.onChat(e);
     }
 
     @SubscribeEvent
     public void onGuiMouse(GuiScreenEvent.MouseInputEvent.Pre e) {
-        for (Module m : MODULES) if (m.isEnabled()) m.onGuiMouse(e);
+        for (Module m : ENABLED) m.onGuiMouse(e);
     }
 
     @SubscribeEvent
     public void onHighlight(DrawBlockHighlightEvent e) {
-        for (Module m : MODULES) if (m.isEnabled()) m.onHighlight(e);
+        for (Module m : ENABLED) m.onHighlight(e);
     }
 
     @SubscribeEvent
     public void onMouse(MouseEvent e) {
-        for (Module m : MODULES) if (m.isEnabled()) m.onMouse(e);
+        for (Module m : ENABLED) m.onMouse(e);
     }
 
     @SubscribeEvent
     public void onOverlayPre(RenderGameOverlayEvent.Pre e) {
-        for (Module m : MODULES) if (m.isEnabled()) m.onOverlayPre(e);
+        for (Module m : ENABLED) m.onOverlayPre(e);
     }
 
     @SubscribeEvent
@@ -155,7 +177,7 @@ public final class ModuleManager {
         if (e.type != RenderGameOverlayEvent.ElementType.ALL) return;
         if (mc.currentScreen instanceof HudEditor) return;
         ScaledResolution sr = e.resolution;
-        for (HudModule h : hud()) {
+        for (HudModule h : HUD_ARRAY) {
             if (!h.isEnabled()) continue;
             h.ensurePositioned(sr);
             h.render();

@@ -12,6 +12,8 @@ import java.util.Map;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
+import com.atenas.client.core.Lang;
+import com.atenas.client.gui.Backdrop;
 import com.atenas.client.gui.Draw;
 import com.atenas.client.gui.Theme;
 
@@ -41,9 +43,11 @@ public class SocialScreen extends GuiScreen {
         String time;
     }
 
-    private static final int LIST_W = 168;
-    private static final int HEAD_H = 28;
-    private static final int ROW_H = 28, REQ_H = 26, SEC_H = 16;
+    // Medidas y colores IGUALES a la ventana de Amigos de 1.20.1 (mod atenas-social).
+    private static final int HEAD = 38, FOOT = 18, PAD = 10, CUT = 6, FIELD_H = 20, FRIEND_H = 32, REQ_H = 30, SEC_H = 20;
+    private static final int PANEL = 0xFF0F0D22, PANEL2 = 0xFF1E1B38, LINE = 0xFF2B2848, ACCENT = 0xFF8B5CF6, ACCENT_LIGHT = 0xFFA78BFA, PINK = 0xFFEC4899;
+    private static final int TEXT = 0xFFF1EEFC, MUTED = 0xFF9B97B8, FAINT = 0xFF6E6A8F, GREEN = 0xFF34D399, RED = 0xFFFB7185, AMBER = 0xFFFBBF24, CYAN = 0xFF22D3EE, OFFLINE = 0xFF5A5680;
+    private static final int NOTICE_MS = 6000;
 
     private final GuiScreen parent;
     private final List<Hit> hits = new ArrayList<Hit>();
@@ -59,6 +63,7 @@ public class SocialScreen extends GuiScreen {
     private boolean noticeBad;
     private long noticeAt;
     private int x0, y0, pw, ph;
+    private final float[] glow = new float[3]; // brillo animado de los botones: 0 = agregar, 1 = enviar, 2 = quitar
 
     public SocialScreen(GuiScreen parent) { this.parent = parent; }
 
@@ -66,35 +71,37 @@ public class SocialScreen extends GuiScreen {
     public boolean doesGuiPauseGame() { return false; }
 
     // ------------------------------------------------------------ medidas (initGui y el dibujo usan las MISMAS)
-    private int bodyTop() { return y0 + HEAD_H + 6; }
-    private int bodyH() { return ph - HEAD_H - 14; }
-    private int listX() { return x0 + 8; }
-    private int chatX() { return x0 + LIST_W + 16; }
-    private int chatW() { return pw - LIST_W - 24; }
-    private int inputY() { return bodyTop() + bodyH() - 24; }
-    private int inputX() { return chatX() + 6; }
-    private int inputW() { return chatW() - 12 - 52; }
+    private int lw() { return pw < 440 ? 150 : 178; }
+    private int bodyTop() { return y0 + HEAD + 8; }
+    private int bodyBottom() { return y0 + ph - FOOT - 6; }
+    private int listX() { return x0 + PAD; }
+    private int listTop() { return bodyTop() + FIELD_H + 6; }
+    private int cx() { return x0 + PAD + lw() + 8; }
+    private int cw() { return pw - lw() - PAD * 2 - 8; }
+    private int inputY() { return bodyBottom() - FIELD_H - 6; }
+    private int inputX() { return cx() + 6; }
+    private int inputW() { return cw() - 12 - 56 - 4; }
 
     @Override
     public void initGui() {
         Keyboard.enableRepeatEvents(true);
-        pw = Math.min(480, width - 12);
-        ph = Math.min(290, height - 12);
+        pw = Math.min(520, width - 16);
+        ph = Math.min(320, height - 16);
         x0 = (width - pw) / 2;
         y0 = (height - ph) / 2;
         String keepAdd = addField == null ? "" : addField.getText();
         String keepChat = chatField == null ? "" : chatField.getText();
-        addField = field(1, listX() + 20, bodyTop(), LIST_W - 20 - 28, 18, 16);
+        addField = field(1, listX() + 22, bodyTop() + (FIELD_H - 8) / 2, lw() - 54, 16);
         addField.setText(keepAdd);
-        chatField = field(2, inputX(), inputY(), inputW(), 18, 300);
+        chatField = field(2, inputX() + 8, inputY() + (FIELD_H - 8) / 2, inputW() - 16, 300);
         chatField.setText(keepChat);
         chatField.setFocused(selected != null);
         if (SocialClient.snapshot() == null || SocialClient.sinceLastSync() > 3000) SocialClient.sync(mc.theWorld != null, "");
     }
 
-    /** Campo de texto dentro de la caja (bx, by, bw, bh): sin fondo propio, con el texto centrado en vertical y 4 px de aire a los lados. */
-    private GuiTextField field(int id, int bx, int by, int bw, int bh, int max) {
-        GuiTextField f = new GuiTextField(id, fontRendererObj, bx + 4, by + (bh - 8) / 2, bw - 8, 8);
+    /** Campo de texto sin fondo propio (la caja la dibuja inputBox): el texto se pinta justo en (fx, fy). */
+    private GuiTextField field(int id, int fx, int fy, int fw, int max) {
+        GuiTextField f = new GuiTextField(id, fontRendererObj, fx, fy, fw, 8);
         f.setMaxStringLength(max);
         f.setEnableBackgroundDrawing(false);
         f.setCanLoseFocus(true);
@@ -213,12 +220,12 @@ public class SocialScreen extends GuiScreen {
     private void sendRequest() {
         String n = addField.getText().trim();
         if (n.isEmpty()) return;
-        if (!SocialClient.validName(n)) { say("Nick no valido (3-16 letras, numeros o _).", true); return; }
+        if (!SocialClient.validName(n)) { say(Lang.t("Nick no valido (3-16 letras, numeros o _).", "Invalid name (3-16 letters, numbers or _)."), true); return; }
         addField.setText("");
         SocialClient.add(n, new SocialClient.Callback<String>() {
             @Override public void done(String v, String err) {
                 if (err != null) say(err, true);
-                else say(v.startsWith("accepted") ? "Ahora eres amigo de " + v.substring(v.indexOf('|') + 1) : "Solicitud enviada a " + v.substring(v.indexOf('|') + 1), false);
+                else say(v.startsWith("accepted") ? Lang.t("Ahora eres amigo de ", "You are now friends with ") + v.substring(v.indexOf('|') + 1) : Lang.t("Solicitud enviada a ", "Request sent to ") + v.substring(v.indexOf('|') + 1), false);
             }
         });
     }
@@ -232,12 +239,12 @@ public class SocialScreen extends GuiScreen {
     // ------------------------------------------------------------ piezas de dibujo
 
     private String stateText(SocialClient.Friend f) {
-        if (f.playing()) return f.server.isEmpty() ? "Jugando" : "Jugando en " + f.server;
-        return f.online() ? "En el launcher" : "Desconectado";
+        if (f.playing()) return f.server.isEmpty() ? Lang.t("Jugando", "Playing") : Lang.t("Jugando en ", "Playing on ") + f.server;
+        return f.online() ? Lang.t("En el launcher", "In the launcher") : Lang.t("Desconectado", "Offline");
     }
 
     private int stateColor(SocialClient.Friend f) {
-        return f.playing() ? Theme.GREEN : f.online() ? Theme.CYAN : 0xFF5A5680;
+        return f.playing() ? GREEN : f.online() ? CYAN : OFFLINE;
     }
 
     /** Cara del jugador (o su inicial mientras llega) con marco del color de su estado y un punto de estado opcional. */
@@ -246,35 +253,78 @@ public class SocialScreen extends GuiScreen {
         if (!Faces.draw(name, x, y, s, 1f, false)) {
             Draw.rect(x, y, s, s, 0xFF2A2550);
             String ini = name == null || name.isEmpty() ? "?" : name.substring(0, 1).toUpperCase(Locale.ROOT);
-            Draw.centered(ini, x + s / 2, y + (s - 8) / 2, Theme.ACCENT);
+            Draw.centered(ini, x + s / 2, y + (s - 8) / 2, ACCENT_LIGHT);
         }
         if (dim) Draw.rect(x, y, s, s, 0x88090812);
         if (dot) {
-            Draw.rect(x + s - 5, y + s - 5, 7, 7, Theme.PANEL);
+            Draw.rect(x + s - 5, y + s - 5, 7, 7, PANEL);
             Draw.rect(x + s - 4, y + s - 4, 5, 5, ring);
         }
     }
 
     private void smallBtn(String label, int x, int y, int w, int h, int mx, int my, int color, Runnable r) {
         boolean hov = Draw.inside(mx, my, x, y, w, h);
-        Draw.card(x, y, w, h, hov ? Theme.PANEL2 : Theme.PANEL, hov ? color : Theme.BORDER);
-        Draw.centered(label, x + w / 2, y + (h - 8) / 2, hov ? color : Theme.TEXT);
+        Draw.batchBegin();
+        Draw.chamfer(x, y, w, h, 2, hov ? PANEL2 : PANEL);
+        Draw.chamferBorder(x, y, w, h, 2, hov ? color : LINE);
+        Draw.batchEnd();
+        Draw.centered(label, x + w / 2, y + (h - 8) / 2, hov ? color : TEXT);
         hits.add(new Hit(x, y, w, h, r));
     }
 
-    private void primaryBtn(String label, int x, int y, int w, int h, int mx, int my, Runnable r) {
-        boolean hov = Draw.inside(mx, my, x, y, w, h);
-        Draw.chamfer(x, y, w, h, 2, 0xFF2A1A5E);
-        Draw.gradient(x + 1, y + 1, w - 2, h - 2, hov ? Theme.ACCENT : Theme.VIOLET, hov ? Theme.PINK : Theme.MAGENTA, false);
-        Draw.chamferBorder(x, y, w, h, 2, hov ? 0xFFFFFFFF : Theme.ACCENT);
-        Draw.centered(label, x + w / 2, y + (h - 8) / 2, 0xFFFFFFFF);
+    /** Boton futurista (igual que Ui.Btn de 1.20.1): "primary" lleva degradado violeta -> rosa; el otro es cristal con barra de neon al pasar el mouse. */
+    private void btn(int slot, String label, int x, int y, int w, int h, int mx, int my, boolean primary, Runnable r) {
+        boolean hot = Draw.inside(mx, my, x, y, w, h);
+        glow[slot] += ((hot ? 1f : 0f) - glow[slot]) * 0.22f;
+        float gl = glow[slot];
+        int cut = h >= 18 ? 4 : 3;
+        Draw.batchBegin();
+        if (primary) {
+            Draw.chamfer(x, y, w, h, cut, 0xFF2A1A5E);
+            Draw.gradient(x + cut, y + 1, w - 2 * cut, h - 2, hot ? ACCENT_LIGHT : ACCENT, hot ? PINK : 0xFF6D4FC7, true);
+            Draw.chamferBorder(x, y, w, h, cut, hot ? 0xFFFFFFFF : ACCENT_LIGHT);
+        } else {
+            Draw.chamfer(x, y, w, h, cut, 0xE60D0B1E);
+            int a = (int) (0x46 * gl);
+            Draw.gradient(x + cut, y + h / 2, w - 2 * cut, h - 1 - h / 2, 0x008B5CF6, (a << 24) | 0x8B5CF6, true);
+            Draw.chamferBorder(x, y, w, h, cut, hot ? ACCENT_LIGHT : 0xFF3A3466);
+            int bar = (int) (gl * (w - 2 * cut));
+            if (bar > 0) Draw.gradient(x + w / 2 - bar / 2, y + h - 2, bar, 1, ACCENT, CYAN, false);
+            Draw.rect(x + w - cut - 5, y, 5, 1, hot ? CYAN : 0xFF6D4FC7);
+            Draw.rect(x + cut, y + h - 1, 5, 1, hot ? PINK : 0xFF6D4FC7);
+        }
+        Draw.batchEnd();
+        Draw.headingFit(label, x + cut, w - 2 * cut, y + (h - 8) / 2, hot ? 0xFFFFFFFF : TEXT, (int) (gl * 1.5f));
         hits.add(new Hit(x, y, w, h, r));
     }
 
+    private void closeBtn(int x, int y, int s, int mx, int my) {
+        boolean hov = Draw.inside(mx, my, x, y, s, s);
+        Draw.batchBegin();
+        Draw.chamfer(x, y, s, s, 3, hov ? 0xFF3A1F3F : PANEL);
+        Draw.chamferBorder(x, y, s, s, 3, hov ? RED : LINE);
+        int c = hov ? RED : TEXT;
+        for (int i = 0; i < 7; i++) {
+            Draw.rect(x + 5 + i, y + 5 + i, 1, 1, c);
+            Draw.rect(x + 11 - i, y + 5 + i, 1, 1, c);
+        }
+        Draw.batchEnd();
+        hits.add(new Hit(x, y, s, s, new Runnable() { @Override public void run() { mc.displayGuiScreen(parent); } }));
+    }
+
+    /** Caja de texto: cristal oscuro con esquinas cortadas; con el foco, borde claro y una linea de degradado abajo. */
     private void inputBox(int x, int y, int w, int h, boolean focus) {
-        Draw.chamfer(x, y, w, h, 2, 0xFF0B0A1C);
-        Draw.chamferBorder(x, y, w, h, 2, focus ? Theme.ACCENT : Theme.BORDER);
-        if (focus) Draw.gradient(x + 3, y + h - 1, w - 6, 1, Theme.VIOLET, Theme.PINK, false);
+        Draw.batchBegin();
+        Draw.chamfer(x, y, w, h, 3, 0xFF0A0918);
+        Draw.chamferBorder(x, y, w, h, 3, focus ? ACCENT_LIGHT : LINE);
+        if (focus) Draw.gradient(x + 4, y + h - 1, w - 8, 1, ACCENT, PINK, false);
+        Draw.batchEnd();
+    }
+
+    private static void userIcon(int x, int y, int c) {
+        Draw.rect(x + 3, y, 4, 4, c);
+        Draw.rect(x + 2, y + 5, 6, 1, c);
+        Draw.rect(x + 1, y + 6, 8, 3, c);
     }
 
     // ------------------------------------------------------------ dibujo
@@ -282,45 +332,83 @@ public class SocialScreen extends GuiScreen {
     @Override
     public void drawScreen(int mx, int my, float pt) {
         hits.clear();
-        Draw.rect(0, 0, width, height, 0xA0000000);
-        // resplandor + panel
-        Draw.rect(x0 - 3, y0 - 3, pw + 6, ph + 6, 0x30A78BFA);
-        Draw.rect(x0 - 1, y0 - 1, pw + 2, ph + 2, 0x55A78BFA);
-        Draw.rect(x0, y0, pw, ph, Theme.BG);
-        Draw.border(x0, y0, pw, ph, Theme.BORDER);
+        long t = System.currentTimeMillis();
 
+        // fondo: con mundo detras, un velo oscuro; sin mundo, el fondo animado de Atenas (una sola llamada de dibujo)
+        boolean inWorld = mc.theWorld != null;
+        if (!inWorld) Backdrop.render(width, height);
+
+        // Toda la "carcasa" (velo, resplandor, panel, cabecera) son formas lisas: un solo lote de dibujo
+        Draw.batchBegin();
+        if (inWorld) Draw.gradient(0, 0, width, height, 0xC0070914, 0xE00E0B22, true);
+        for (int k = 3; k >= 1; k--) Draw.chamfer(x0 - k * 2, y0 - k * 2, pw + k * 4, ph + k * 4, CUT + k * 2, ((0x16 / k) << 24) | 0x8B5CF6);
+        Draw.chamfer(x0, y0, pw, ph, CUT, 0xF4090818);
+        Draw.chamferBorder(x0, y0, pw, ph, CUT, 0xFF3A3466);
         // cabecera
-        Draw.gradient(x0 + 1, y0 + 1, pw - 2, HEAD_H - 1, 0xFF1B1740, 0xFF0C0A1A, true);
-        Draw.gradient(x0, y0, pw / 2, 2, Theme.VIOLET, Theme.MAGENTA, false);
-        Draw.gradient(x0 + pw / 2, y0, pw - pw / 2, 2, Theme.MAGENTA, Theme.PINK, false);
-        Draw.rect(x0, y0 + HEAD_H, pw, 1, Theme.BORDER);
-        Draw.logo(x0 + 9, y0 + 6, 18);
-        Draw.heading("Amigos", x0 + 33, y0 + 5, Theme.TEXT);
-        if (SocialClient.usable()) {
-            int on = onlineNow();
-            Draw.rect(x0 + 34, y0 + 18, 5, 5, on > 0 ? Theme.GREEN : 0xFF5A5680);
-            Draw.text(onlineCount(), x0 + 43, y0 + 17, Theme.DIM);
+        Draw.gradient(x0 + CUT, y0 + 1, pw - 2 * CUT, CUT - 1, 0xFF1B1740, 0xFF181436, true);
+        Draw.gradient(x0 + 1, y0 + CUT, pw - 2, HEAD - CUT, 0xFF181436, 0xFF0C0A1A, true);
+        Draw.rect(x0 + 1, y0 + HEAD, pw - 2, 1, LINE);
+        Draw.gradient(x0 + CUT, y0, pw - 2 * CUT, 2, ACCENT, PINK, false);
+        Draw.gradient(x0 + 14, y0 + HEAD, 70, 1, ACCENT, 0x008B5CF6, false);
+        float pulse = (float) (0.5 + 0.5 * Math.sin(t * 0.003));
+        Draw.rect(x0 + 10, y0 + 7, 26, 26, (((int) (12 + 16 * pulse)) << 24) | 0x8B5CF6);
+        Draw.batchEnd();
+
+        Draw.logo(x0 + 12, y0 + 9, 22);
+        GlStateManager.pushMatrix();
+        GlStateManager.translate((float) (x0 + 42), (float) (y0 + 8), 0f);
+        GlStateManager.scale(1.25f, 1.25f, 1f);
+        Draw.heading("Amigos", 0, 0, TEXT);
+        GlStateManager.popMatrix();
+
+        String st = SocialClient.status();
+        SocialClient.Snapshot snap = SocialClient.snapshot();
+        int sx = x0 + 42, sy = y0 + 23;
+        if (snap == null || !"ok".equals(st)) {
+            boolean err = "error".equals(st);
+            String sub = "noaccount".equals(st) ? Lang.t("Inicia sesión", "Sign in") : "disabled".equals(st) ? Lang.t("Desactivado en ajustes", "Disabled in settings")
+                    : err ? Lang.t("Sin conexión", "Offline") : Lang.t("Conectando...", "Connecting...");
+            Draw.rect(sx, sy + 2, 5, 5, err ? RED : AMBER);
+            Draw.text(sub, sx + 9, sy, err ? RED : MUTED);
         } else {
-            Draw.text(stateLine(), x0 + 34, y0 + 17, Theme.DIM);
+            int on = onlineNow();
+            Draw.rect(sx, sy + 2, 5, 5, on > 0 ? GREEN : OFFLINE);
+            String line = snap.friends.isEmpty() ? Lang.t("Sin amigos todavía", "No friends yet")
+                    : Lang.t(on + " de " + snap.friends.size() + " conectados", on + " of " + snap.friends.size() + " online");
+            Draw.text(line, sx + 9, sy, MUTED);
         }
-        smallBtn("x", x0 + pw - 22, y0 + 7, 14, 14, mx, my, Theme.RED, new Runnable() {
-            @Override public void run() { mc.displayGuiScreen(parent); }
-        });
-        String hint = "Shift+Tab";
-        Draw.text(hint, x0 + pw - 28 - Draw.width(hint), y0 + 10, Theme.OFF);
+        closeBtn(x0 + pw - 26, y0 + 11, 16, mx, my);
+        if (!notice.isEmpty() && System.currentTimeMillis() - noticeAt < NOTICE_MS) { // aviso dentro de la cabecera (hasta 2 lineas)
+            int fx = x0 + 170, fw = pw - 170 - 40;
+            if (fw > 60) {
+                List<String> ls = Draw.wrap(notice, fw - 12, 2);
+                int n = ls.size();
+                int fy = y0 + (HEAD - n * 10) / 2 + 1;
+                Draw.batchBegin();
+                Draw.chamfer(fx - 6, y0 + 6, fw, HEAD - 12, 2, 0xCC2A1A5E);
+                Draw.rect(fx - 6, y0 + 8, 2, HEAD - 16, AMBER);
+                Draw.batchEnd();
+                for (int i = 0; i < n; i++) Draw.text(ls.get(i), fx + 2, fy + i * 10, AMBER);
+            }
+        }
 
         drawList(mx, my);
         drawChat(mx, my);
-
-        if (System.currentTimeMillis() - noticeAt < 5000 && !notice.isEmpty() && selected == null) {
-            List<String> ls = Draw.wrap(notice, pw - 40, 2);
-            int bh = 8 + ls.size() * 10;
-            int nx = x0 + 8, nw = pw - 16, ny = y0 + ph - 8 - bh;
-            Draw.rect(nx, ny, nw, bh, noticeBad ? 0xF04A1620 : 0xF012361F);
-            Draw.rect(nx, ny, 2, bh, noticeBad ? Theme.RED : Theme.GREEN);
-            for (int i = 0; i < ls.size(); i++) Draw.centered(ls.get(i), x0 + pw / 2, ny + 4 + i * 10, noticeBad ? 0xFFFF9AA8 : 0xFF86F0B8);
-        }
+        drawFooter();
         super.drawScreen(mx, my, pt);
+    }
+
+    /** Pie: atajos a la izquierda y, a la derecha, tu nick y si la cuenta esta verificada con Mojang (los cosmeticos privados lo exigen). */
+    private void drawFooter() {
+        int fy = y0 + ph - FOOT;
+        Draw.rect(x0 + 1, fy, pw - 2, 1, LINE);
+        if (pw >= 400) Draw.text(Lang.t("Esc cerrar  ·  Enter enviar  ·  Rueda para desplazar", "Esc close  ·  Enter send  ·  Scroll to move"), x0 + PAD, fy + 6, FAINT);
+        boolean ok = SocialClient.verified();
+        String who = mc.getSession() == null ? "" : mc.getSession().getUsername();
+        String tag = who + "  ·  " + (ok ? Lang.t("cuenta verificada", "verified account") : Lang.t("sin verificar", "not verified"));
+        int tx = x0 + pw - PAD - Draw.width(tag);
+        Draw.rect(tx - 9, fy + 8, 5, 5, ok ? GREEN : AMBER);
+        Draw.text(tag, tx, fy + 6, ok ? MUTED : AMBER);
     }
 
     private int onlineNow() {
@@ -330,122 +418,127 @@ public class SocialScreen extends GuiScreen {
         return on;
     }
 
-    private String onlineCount() {
-        SocialClient.Snapshot s = SocialClient.snapshot();
-        return s.friends.isEmpty() ? "Sin amigos todavia" : onlineNow() + " de " + s.friends.size() + " conectados";
-    }
-
-    private String stateLine() {
-        String st = SocialClient.status();
-        if ("noaccount".equals(st)) return "Inicia sesion para usar amigos";
-        if ("disabled".equals(st)) return "Desactivado en ajustes";
-        if ("error".equals(st)) return "Sin conexion";
-        return "Conectando...";
-    }
-
     private void drawList(int mx, int my) {
-        int lx = listX(), top = bodyTop(), lw = LIST_W;
-        // barra de "agregar amigo": icono + caja + boton
-        Draw.rect(lx, top, 18, 18, Theme.PANEL2);
-        Draw.border(lx, top, 18, 18, Theme.BORDER);
-        Draw.centered("+", lx + 9, top + 5, Theme.ACCENT);
-        inputBox(lx + 20, top, lw - 20 - 28, 18, addField.isFocused());
-        if (addField.getText().isEmpty() && !addField.isFocused()) Draw.text("Agregar amigo...", lx + 24, top + 5, Theme.OFF);
+        int lx = listX(), top = bodyTop(), w = lw();
+        // campo para agregar
+        boolean af = addField.isFocused();
+        inputBox(lx, top, w - 26, FIELD_H, af);
+        userIcon(lx + 7, top + 6, af ? ACCENT_LIGHT : FAINT);
+        if (addField.getText().isEmpty() && !af) Draw.text(Lang.t("Agregar amigo...", "Add friend..."), lx + 22, top + (FIELD_H - 8) / 2, FAINT);
         addField.drawTextBox();
-        primaryBtn("\u2192", lx + lw - 26, top, 26, 18, mx, my, new Runnable() { @Override public void run() { sendRequest(); } });
+        btn(0, "+", lx + w - 22, top, 22, FIELD_H, mx, my, true, new Runnable() { @Override public void run() { sendRequest(); } });
 
-        int ly = top + 24, lh = bodyH() - 24;
-        Draw.rect(lx, ly, lw, lh, Theme.PANEL);
-        Draw.border(lx, ly, lw, lh, Theme.BORDER);
+        int ly = listTop(), lb = bodyBottom(), lh = lb - ly;
+        Draw.batchBegin();
+        Draw.chamfer(lx, ly, w, lh, 3, PANEL);
+        Draw.chamferBorder(lx, ly, w, lh, 3, LINE);
+        Draw.batchEnd();
         SocialClient.Snapshot s = SocialClient.snapshot();
         if (s == null || !SocialClient.usable()) {
-            drawWrapped(stateLine() + ("error".equals(SocialClient.status()) ? ". " + SocialClient.error() : ""), lx + 10, ly + 12, lw - 20, Theme.DIM);
+            boolean err = "error".equals(SocialClient.status());
+            String msg = err ? Lang.t("Sin conexión. ", "Offline. ") + SocialClient.error()
+                    : "noaccount".equals(SocialClient.status()) ? Lang.t("Inicia sesión para usar amigos", "Sign in to use friends")
+                    : "disabled".equals(SocialClient.status()) ? Lang.t("Desactivado en ajustes", "Disabled in settings") : Lang.t("Conectando...", "Connecting...");
+            drawWrapped(msg, lx + 10, ly + 12, w - 20, err ? RED : MUTED);
             return;
         }
         List<Object> rows = new ArrayList<Object>();
-        if (!s.incoming.isEmpty()) { rows.add("SOLICITUDES  " + s.incoming.size()); rows.addAll(s.incoming); }
-        addGroup(rows, s, "playing", "JUGANDO AHORA");
-        addGroup(rows, s, "online", "EN EL LAUNCHER");
-        addGroup(rows, s, "offline", "DESCONECTADOS");
-        if (!s.outgoing.isEmpty()) { rows.add("ENVIADAS  " + s.outgoing.size()); for (SocialClient.Req r : s.outgoing) rows.add(new Object[] {r}); }
+        if (!s.incoming.isEmpty()) { rows.add(new Title(Lang.t("Solicitudes", "Requests"), s.incoming.size(), AMBER)); rows.addAll(s.incoming); }
+        addGroup(rows, s, "playing", Lang.t("Jugando ahora", "Playing now"), GREEN);
+        addGroup(rows, s, "online", Lang.t("En línea", "Online"), CYAN);
+        addGroup(rows, s, "offline", Lang.t("Desconectados", "Offline"), OFFLINE);
+        if (!s.outgoing.isEmpty()) { rows.add(new Title(Lang.t("Enviadas", "Sent"), s.outgoing.size(), FAINT)); for (SocialClient.Req r : s.outgoing) rows.add(new Object[] {r}); }
         if (rows.isEmpty()) {
-            Draw.logo(lx + lw / 2 - 12, ly + lh / 2 - 44, 24);
-            Draw.centered("Aun no tienes amigos", lx + lw / 2, ly + lh / 2 - 12, Theme.TEXT);
-            List<String> ls = Draw.wrap("Escribe su nick arriba y envia una solicitud.", lw - 24, 3);
-            for (int i = 0; i < ls.size(); i++) Draw.centered(ls.get(i), lx + lw / 2, ly + lh / 2 + 2 + i * 10, Theme.DIM);
+            Draw.logo(lx + w / 2 - 14, ly + lh / 2 - 48, 28);
+            Draw.centered(Lang.t("Aún no tienes amigos", "No friends yet"), lx + w / 2, ly + lh / 2 - 12, TEXT);
+            drawWrapped(Lang.t("Escribe su nick arriba y envía una solicitud.", "Type their name above and send a request."), lx + 12, ly + lh / 2 + 2, w - 24, MUTED);
             return;
         }
         int total = 0;
         for (Object o : rows) total += rowHeight(o);
         scrollList = Math.max(0, Math.min(scrollList, Math.max(0, total - lh + 4)));
-        Draw.scissor(lx + 1, ly + 1, lw - 2, lh - 2);
+        Draw.scissor(lx + 1, ly + 1, w - 2, lh - 2);
         int y = ly + 2 - scrollList;
+        int right = lx + w - 8;
         for (Object o : rows) {
             int rh = rowHeight(o);
-            if (y + rh < ly || y > ly + lh) { y += rh; continue; }
-            if (o instanceof String) {
-                String t = (String) o;
-                Draw.text(t, lx + 9, y + 6, Theme.ACCENT_DIM);
-                int tw = Draw.width(t);
-                Draw.rect(lx + 9 + tw + 6, y + 10, lw - 9 - tw - 6 - 8, 1, Theme.BORDER);
+            if (y + rh < ly || y > lb) { y += rh; continue; }
+            if (o instanceof Title) {
+                Title ti = (Title) o;
+                String cnt = String.valueOf(ti.count);
+                int cw = Draw.width(cnt);
+                Draw.rect(lx + 9, y + 8, 4, 4, ti.color);
+                Draw.heading(ti.text, lx + 18, y + 6, ti.color);
+                int hw = Draw.headingWidth(ti.text);
+                int lineX = lx + 18 + hw + 6, lineW = right - cw - 6 - lineX;
+                if (lineW > 0) Draw.rect(lineX, y + 10, lineW, 1, LINE);
+                Draw.text(cnt, right - cw, y + 6, MUTED);
             } else if (o instanceof SocialClient.Friend) {
                 final SocialClient.Friend f = (SocialClient.Friend) o;
-                boolean sel = f.key.equals(selected);
-                boolean h = Draw.inside(mx, my, lx, y, lw, rh) && my >= ly && my < ly + lh;
-                if (sel) {
-                    Draw.gradient(lx + 1, y, lw - 2, rh, 0x558B5CF6, 0x108B5CF6, false);
-                    Draw.gradient(lx + 1, y, 2, rh, Theme.VIOLET, Theme.PINK, true);
-                } else if (h) {
-                    Draw.rect(lx + 1, y, lw - 2, rh, Theme.HOVER);
+                boolean active = f.key.equals(selected);
+                boolean hover = Draw.inside(mx, my, lx, y, w, rh) && my >= ly && my < lb;
+                if (active) {
+                    Draw.gradient(lx + 1, y, w - 2, rh, 0xFF2A2458, 0xFF1D1940, true);
+                    Draw.gradient(lx + 1, y, 2, rh, ACCENT, PINK, true);
+                } else if (hover) {
+                    Draw.rect(lx + 1, y, w - 2, rh, 0xFF181530);
                 }
-                avatar(f.name, lx + 9, y + 4, 20, stateColor(f), !f.online(), true);
-                int nx = lx + 36;
-                int badgeW = f.unread > 0 ? 18 : 0;
-                Draw.text(Draw.fit(f.name, lw - 44 - badgeW), nx, y + 5, f.online() ? Theme.TEXT : Theme.DIM);
+                int col = stateColor(f);
+                avatar(f.name, lx + 9, y + 4, 24, col, !f.online(), true);
                 boolean preview = f.unread > 0 && !f.previewBody.isEmpty();
-                Draw.text(Draw.fit(preview ? f.previewBody : stateText(f), lw - 44 - badgeW), nx, y + 16, preview ? Theme.AMBER : stateColor(f));
+                int badge = f.unread > 0 ? 24 : 0;
+                int tw = w - 46 - badge;
+                Draw.text(Draw.fit(f.name, tw), lx + 40, y + 6, f.online() ? TEXT : MUTED);
+                Draw.text(Draw.fit(preview ? f.previewBody : stateText(f), tw), lx + 40, y + 18, preview ? AMBER : col);
                 if (f.unread > 0) {
                     String n = f.unread > 9 ? "9+" : String.valueOf(f.unread);
-                    int bx = lx + lw - 24, by = y + 8;
-                    Draw.gradient(bx, by, 16, 12, Theme.VIOLET, Theme.PINK, false);
-                    Draw.centered(n, bx + 8, by + 2, 0xFFFFFFFF);
+                    Draw.batchBegin();
+                    Draw.chamfer(right - 16, y + 9, 17, 13, 3, ACCENT);
+                    Draw.gradient(right - 14, y + 10, 13, 11, ACCENT_LIGHT, PINK, true);
+                    Draw.batchEnd();
+                    Draw.text(n, right - 7 - Draw.width(n) / 2, y + 12, 0xFFFFFFFF);
                 }
-                addClipped(lx, y, lw, rh, ly + 1, ly + lh - 1, new Runnable() { @Override public void run() { openChat(f.key); } });
+                addClipped(lx, y, w, rh, ly + 1, lb - 1, new Runnable() { @Override public void run() { openChat(f.key); } });
             } else if (o instanceof SocialClient.Req) {
                 final SocialClient.Req r = (SocialClient.Req) o;
-                avatar(r.name, lx + 9, y + 3, 20, Theme.AMBER, false, false);
-                Draw.text(Draw.fit(r.name, lw - 100), lx + 36, y + 3, Theme.TEXT);
-                Draw.text("quiere ser tu amigo", lx + 36, y + 14, Theme.DIM);
-                int by = y + 6;
-                smallBtn("+", lx + lw - 42, by, 16, 14, mx, my, Theme.GREEN, new Runnable() {
-                    @Override public void run() { SocialClient.accept(r.key, plain("Ahora eres amigo de " + r.name)); }
+                avatar(r.name, lx + 9, y + 3, 22, AMBER, false, false);
+                Draw.text(Draw.fit(r.name, w - 98), lx + 38, y + 5, TEXT);
+                Draw.text(Draw.fit(Lang.t("quiere ser tu amigo", "wants to be friends"), w - 98), lx + 38, y + 16, MUTED);
+                smallBtn("+", right - 38, y + 7, 17, 16, mx, my, GREEN, new Runnable() {
+                    @Override public void run() { SocialClient.accept(r.key, plain(Lang.t("Ahora eres amigo de ", "You are now friends with ") + r.name)); }
                 });
-                smallBtn("x", lx + lw - 24, by, 16, 14, mx, my, Theme.RED, new Runnable() {
-                    @Override public void run() { SocialClient.remove(r.key, plain("Solicitud rechazada")); }
+                smallBtn("x", right - 18, y + 7, 17, 16, mx, my, RED, new Runnable() {
+                    @Override public void run() { SocialClient.remove(r.key, plain(Lang.t("Solicitud rechazada", "Request declined"))); }
                 });
             } else {
                 final SocialClient.Req r = (SocialClient.Req) ((Object[]) o)[0];
-                avatar(r.name, lx + 9, y + 3, 20, 0xFF5A5680, true, false);
-                Draw.text(Draw.fit(r.name, lw - 80), lx + 36, y + 3, Theme.DIM);
-                Draw.text("esperando respuesta...", lx + 36, y + 14, Theme.OFF);
-                smallBtn("x", lx + lw - 24, y + 6, 16, 14, mx, my, Theme.RED, new Runnable() {
-                    @Override public void run() { SocialClient.remove(r.key, plain("Solicitud cancelada")); }
+                avatar(r.name, lx + 9, y + 3, 22, OFFLINE, true, false);
+                Draw.text(Draw.fit(r.name, w - 70), lx + 38, y + 5, MUTED);
+                Draw.text(Draw.fit(Lang.t("esperando respuesta...", "waiting for reply..."), w - 70), lx + 38, y + 16, FAINT);
+                smallBtn("x", right - 18, y + 7, 17, 16, mx, my, RED, new Runnable() {
+                    @Override public void run() { SocialClient.remove(r.key, plain(Lang.t("Solicitud cancelada", "Request cancelled"))); }
                 });
             }
             y += rh;
         }
         Draw.endScissor();
-        // barra de scroll fina
-        if (total > lh) {
+        if (total > lh) { // barra de scroll fina
             int sbH = Math.max(14, (int) ((long) lh * lh / total));
             int sbY = ly + 2 + (int) ((long) (lh - 4 - sbH) * scrollList / Math.max(1, total - lh + 4));
-            Draw.rect(lx + lw - 3, sbY, 2, sbH, Theme.ACCENT_DIM);
+            Draw.rect(lx + w - 3, sbY, 2, sbH, 0xFF6D4FC7);
         }
     }
 
+    /** Titulo de grupo de la lista (Jugando ahora, En linea...), con su color y cuantos hay. */
+    private static final class Title {
+        final String text;
+        final int count, color;
+        Title(String text, int count, int color) { this.text = text; this.count = count; this.color = color; }
+    }
+
     private int rowHeight(Object o) {
-        if (o instanceof String) return SEC_H;
-        if (o instanceof SocialClient.Friend) return ROW_H;
+        if (o instanceof Title) return SEC_H;
+        if (o instanceof SocialClient.Friend) return FRIEND_H;
         return REQ_H;
     }
 
@@ -454,11 +547,11 @@ public class SocialScreen extends GuiScreen {
         if (hh > 0) hits.add(new Hit(x, hy, w, hh, r));
     }
 
-    private void addGroup(List<Object> rows, SocialClient.Snapshot s, String state, String title) {
+    private void addGroup(List<Object> rows, SocialClient.Snapshot s, String state, String title, int color) {
         int n = 0;
         for (SocialClient.Friend f : s.friends) if (f.state.equals(state)) n++;
         if (n == 0) return;
-        rows.add(title + "  " + n);
+        rows.add(new Title(title, n, color));
         for (SocialClient.Friend f : s.friends) if (f.state.equals(state)) rows.add(f);
     }
 
@@ -498,44 +591,56 @@ public class SocialScreen extends GuiScreen {
         b.lines = wrapText(m.body, maxW);
         int w = 0;
         for (String l : b.lines) w = Math.max(w, Draw.width(l));
-        b.w = w + 12;
-        b.h = b.lines.size() * 10 + 6;
-        b.time = m.failed ? "no enviado" : m.pending ? "enviando..." : new java.text.SimpleDateFormat("HH:mm", Locale.ROOT).format(new java.util.Date(m.ts));
+        b.w = w + 14;
+        b.h = b.lines.size() * 10 + 8;
+        b.time = m.failed ? Lang.t("no enviado", "not sent") : m.pending ? Lang.t("enviando...", "sending...") : new java.text.SimpleDateFormat("HH:mm", Locale.ROOT).format(new java.util.Date(m.ts));
         bubCache.put(m, b);
         return b;
     }
 
     private void drawChat(int mx, int my) {
-        int cx = chatX(), top = bodyTop(), cw = chatW(), ch = bodyH();
-        Draw.rect(cx, top, cw, ch, Theme.PANEL);
-        Draw.border(cx, top, cw, ch, Theme.BORDER);
-        final SocialClient.Friend f = SocialClient.find(selected);
+        int cx = cx(), top = bodyTop(), cw = cw(), bottom = bodyBottom(), ch = bottom - top;
+        Draw.batchBegin();
+        Draw.chamfer(cx, top, cw, ch, 3, PANEL);
+        Draw.chamferBorder(cx, top, cw, ch, 3, LINE);
+        Draw.batchEnd();
+        final SocialClient.Friend f = selected == null ? null : SocialClient.find(selected);
         if (f == null) {
-            Draw.logo(cx + cw / 2 - 20, top + ch / 2 - 52, 40);
-            Draw.centered("Tus conversaciones", cx + cw / 2, top + ch / 2 - 2, Theme.TEXT);
-            Draw.centered("Elige a un amigo de la lista para chatear", cx + cw / 2, top + ch / 2 + 11, Theme.DIM);
+            Draw.logo(cx + cw / 2 - 24, top + ch / 2 - 58, 48);
+            String title = Lang.t("Tus conversaciones", "Your conversations");
+            Draw.heading(title, cx + cw / 2 - Draw.headingWidth(title) / 2, top + ch / 2 - 2, TEXT);
+            Draw.centered(Lang.t("Elige a un amigo de la lista para chatear", "Pick a friend from the list to chat"), cx + cw / 2, top + ch / 2 + 13, MUTED);
             return;
         }
         // cabecera del chat
-        Draw.gradient(cx + 1, top + 1, cw - 2, 30, 0xFF1E1B38, 0xFF171431, true);
-        Draw.rect(cx + 1, top + 31, cw - 2, 1, Theme.BORDER);
-        avatar(f.name, cx + 8, top + 5, 22, stateColor(f), !f.online(), true);
-        Draw.text(f.name, cx + 38, top + 6, Theme.TEXT);
-        Draw.text(Draw.fit(stateText(f), cw - 130), cx + 38, top + 18, stateColor(f));
+        Draw.batchBegin();
+        Draw.gradient(cx + 1, top + 1, cw - 2, 39, 0xFF1E1B38, 0xFF171431, true);
+        Draw.rect(cx + 1, top + 40, cw - 2, 1, LINE);
+        Draw.batchEnd();
+        int ring = stateColor(f);
+        avatar(f.name, cx + 9, top + 7, 26, ring, !f.online(), true);
+        Draw.text(f.name, cx + 44, top + 9, TEXT);
+        Draw.text(Draw.fit(stateText(f), cw - 44 - 76), cx + 44, top + 22, ring);
         boolean armed = f.key.equals(confirmRemove);
-        smallBtn(armed ? "Seguro?" : "Quitar", cx + cw - 56, top + 9, 48, 14, mx, my, Theme.RED, new Runnable() {
+        btn(2, armed ? Lang.t("¿Seguro?", "Sure?") : Lang.t("Quitar", "Remove"), cx + cw - 6 - 58, top + 11, 58, 18, mx, my, false, new Runnable() {
             @Override public void run() {
-                if (f.key.equals(confirmRemove)) { confirmRemove = null; SocialClient.remove(f.key, plain(f.name + " ya no esta en tu lista")); closeChat(); }
-                else { confirmRemove = f.key; say("Pulsa otra vez para quitar a " + f.name + " (borra la conversacion)", true); }
+                if (f.key.equals(confirmRemove)) {
+                    confirmRemove = null;
+                    SocialClient.remove(f.key, plain(f.name + Lang.t(" ya no está en tu lista", " is no longer in your list")));
+                    closeChat();
+                } else {
+                    confirmRemove = f.key;
+                    say(Lang.t("Pulsa «Quitar» otra vez para confirmar (borra el chat)", "Press «Remove» again to confirm (deletes the chat)"), true);
+                }
             }
         });
 
-        // mensajes
-        int logTop = top + 34, logBottom = inputY() - 6, logH = logBottom - logTop;
-        int maxW = Math.max(60, (int) ((cw - 24) * 0.78f));
+        // mensajes: se arman de abajo hacia arriba; la rueda los desplaza
+        int logTop = top + 45, logBottom = inputY() - 6, logH = logBottom - logTop;
+        int maxW = Math.max(60, (int) ((cw - 28) * 0.78f));
         int n = msgs.size();
         Bub[] bs = new Bub[n];
-        int[] after = new int[n];
+        int[] after = new int[n], ys = new int[n];
         boolean[] showTime = new boolean[n];
         int total = 0;
         for (int i = 0; i < n; i++) {
@@ -543,48 +648,50 @@ public class SocialScreen extends GuiScreen {
             bs[i] = layout(m, maxW);
             SocialClient.Msg nx = i + 1 < n ? msgs.get(i + 1) : null;
             showTime[i] = nx == null || nx.mine != m.mine || nx.ts - m.ts > 120000L || m.failed || m.pending;
-            after[i] = showTime[i] ? 12 : 3;
+            after[i] = showTime[i] ? 13 : 3;
             total += bs[i].h + after[i];
         }
         scrollChat = Math.max(0, Math.min(scrollChat, Math.max(0, total - logH + 4)));
         Draw.scissor(cx + 1, logTop, cw - 2, logH);
-        int y = logTop + logH - 2 + scrollChat - total;
+        int y = logBottom - 2 + scrollChat - total;
+        for (int i = 0; i < n; i++) { ys[i] = y; y += bs[i].h + after[i]; }
+        // 1.o pasada: todas las burbujas visibles en un solo lote; 2.a: el texto
+        Draw.batchBegin();
         for (int i = 0; i < n; i++) {
-            SocialClient.Msg m = msgs.get(i);
             Bub b = bs[i];
-            if (y + b.h + after[i] > logTop - 2 && y < logTop + logH) {
-                int bx = m.mine ? cx + cw - 10 - b.w : cx + 10;
-                if (m.mine) {
-                    int base = m.failed ? 0xFF5A1F2C : 0xFF3B2A86;
-                    Draw.chamfer(bx, y, b.w, b.h, 2, base);
-                    if (!m.failed) Draw.gradient(bx + 2, y + 1, b.w - 4, b.h - 2, m.pending ? 0xFF5B4AA8 : 0xFF6D4FC7, m.pending ? 0xFF7A3FA6 : 0xFF9D3FD0, false);
-                } else {
-                    Draw.chamfer(bx, y, b.w, b.h, 2, Theme.PANEL2);
-                    Draw.chamferBorder(bx, y, b.w, b.h, 2, 0xFF2F2B52);
-                }
-                for (int j = 0; j < b.lines.size(); j++) Draw.text(b.lines.get(j), bx + 6, y + 3 + j * 10, m.failed ? 0xFFFFB3BD : Theme.TEXT);
-                if (showTime[i]) {
-                    int tx = m.mine ? bx + b.w - Draw.width(b.time) : bx;
-                    Draw.text(b.time, tx, y + b.h + 2, m.failed ? Theme.RED : 0xFF6E6A8F);
-                }
+            if (ys[i] + b.h + after[i] <= logTop - 2 || ys[i] >= logBottom) continue;
+            SocialClient.Msg m = msgs.get(i);
+            int bx = m.mine ? cx + cw - 10 - b.w : cx + 10;
+            if (m.mine) {
+                Draw.chamfer(bx, ys[i], b.w, b.h, 3, m.failed ? 0xFF5A1F2C : 0xFF3B2A86);
+                if (!m.failed) Draw.gradient(bx + 3, ys[i] + 1, b.w - 6, b.h - 2, m.pending ? 0xFF5B4AA8 : 0xFF6D4FC7, m.pending ? 0xFF7A3FA6 : 0xFF9D3FD0, true);
+            } else {
+                Draw.chamfer(bx, ys[i], b.w, b.h, 3, PANEL2);
+                Draw.chamferBorder(bx, ys[i], b.w, b.h, 3, 0xFF2F2B52);
             }
-            y += b.h + after[i];
         }
-        if (msgs.isEmpty()) {
-            Draw.centered(loadingChat ? "Cargando..." : "Aun no hay mensajes. Saluda!", cx + cw / 2, logTop + logH / 2 - 4, Theme.DIM);
+        Draw.batchEnd();
+        for (int i = 0; i < n; i++) {
+            Bub b = bs[i];
+            if (ys[i] + b.h + after[i] <= logTop - 2 || ys[i] >= logBottom) continue;
+            SocialClient.Msg m = msgs.get(i);
+            int bx = m.mine ? cx + cw - 10 - b.w : cx + 10;
+            for (int j = 0; j < b.lines.size(); j++) Draw.text(b.lines.get(j), bx + 7, ys[i] + 4 + j * 10, m.failed ? 0xFFFFB3BD : TEXT);
+            if (showTime[i]) {
+                int tx = m.mine ? bx + b.w - Draw.width(b.time) : bx;
+                Draw.text(b.time, tx, ys[i] + b.h + 2, m.failed ? RED : FAINT);
+            }
         }
         Draw.endScissor();
-        if (total > logH && scrollChat > 0) Draw.centered("Desplazado: baja para ver lo mas nuevo", cx + cw / 2, logBottom - 10, Theme.ACCENT_DIM);
+        if (n == 0) Draw.centered(loadingChat ? Lang.t("Cargando...", "Loading...") : Lang.t("Aún no hay mensajes. ¡Saluda!", "No messages yet. Say hi!"), cx + cw / 2, logTop + logH / 2 - 4, MUTED);
+        else if (scrollChat > 0) Draw.centered(Lang.t("Desplazado: baja para ver lo más nuevo", "Scrolled: scroll down for the newest"), cx + cw / 2, logBottom - 10, 0xFF6D4FC7);
 
-        // entrada
-        int iy = inputY(), ix = inputX(), iw = inputW();
-        inputBox(ix, iy, iw, 18, chatField.isFocused());
+        // caja de mensaje
+        boolean cf = chatField.isFocused();
+        inputBox(inputX(), inputY(), inputW(), FIELD_H, cf);
+        if (chatField.getText().isEmpty() && !cf) Draw.text(Lang.t("Escribe un mensaje...", "Type a message..."), inputX() + 8, inputY() + (FIELD_H - 8) / 2, FAINT);
         chatField.drawTextBox();
-        if (chatField.getText().isEmpty() && !chatField.isFocused()) Draw.text("Escribe un mensaje...", ix + 5, iy + 5, Theme.OFF);
-        primaryBtn("Enviar", cx + cw - 6 - 46, iy, 46, 18, mx, my, new Runnable() { @Override public void run() { sendChat(); } });
-        if (System.currentTimeMillis() - noticeAt < 5000 && !notice.isEmpty()) {
-            Draw.centered(Draw.fit(notice, cw - 16), cx + cw / 2, iy - 15, noticeBad ? 0xFFFF9AA8 : 0xFF86F0B8);
-        }
+        btn(1, Lang.t("Enviar", "Send"), cx + cw - 6 - 56, inputY(), 56, FIELD_H, mx, my, true, new Runnable() { @Override public void run() { sendChat(); } });
     }
 
     // ------------------------------------------------------------ entrada
@@ -595,16 +702,21 @@ public class SocialScreen extends GuiScreen {
         int d = Mouse.getEventDWheel();
         if (d == 0) return;
         int mx = Mouse.getEventX() * width / mc.displayWidth;
-        if (mx < chatX()) scrollList += d > 0 ? -18 : 18;
+        if (mx < cx() - 4) scrollList += d > 0 ? -18 : 18;
         else scrollChat += d > 0 ? 20 : -20;
     }
 
     @Override
     protected void mouseClicked(int mx, int my, int button) throws IOException {
         super.mouseClicked(mx, my, button);
-        addField.mouseClicked(mx, my, button);
-        if (selected != null) chatField.mouseClicked(mx, my, button);
-        else chatField.setFocused(false);
+        // clic en cualquier parte de la caja = enfocarla
+        boolean inAdd = Draw.inside(mx, my, listX(), bodyTop(), lw() - 26, FIELD_H);
+        boolean inChat = selected != null && Draw.inside(mx, my, inputX(), inputY(), inputW(), FIELD_H);
+        if (button == 0) {
+            if (inAdd) { addField.setFocused(true); chatField.setFocused(false); }
+            else if (inChat) { chatField.setFocused(true); addField.setFocused(false); }
+            else { addField.mouseClicked(mx, my, button); if (selected != null) chatField.mouseClicked(mx, my, button); }
+        }
         if (button != 0) return;
         for (int i = hits.size() - 1; i >= 0; i--) {
             Hit h = hits.get(i);

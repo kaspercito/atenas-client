@@ -15,7 +15,7 @@ import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.GuiNewChat;
 import net.minecraft.client.renderer.GlStateManager;
 
-/** Chat sin fondo, con animacion suave e historial infinito (ajustes del mod "Chat"). Si el mod esta apagado, el chat es el de siempre. */
+/** Chat sin fondo, con animacion suave e historial largo (tope de 20 000 lineas) (ajustes del mod "Chat"). Si el mod esta apagado, el chat es el de siempre. */
 @Mixin(GuiNewChat.class)
 public abstract class MixinGuiNewChat {
 
@@ -45,11 +45,12 @@ public abstract class MixinGuiNewChat {
 
     /**
      * setChatLine borra los mensajes de mas de 100 (tanto las lineas partidas como los mensajes originales). Con "Chat infinito"
-     * el limite pasa a ser enorme, asi que se puede subir con la rueda hasta el primer mensaje de la sesion.
+     * el limite sube a {@link ChatModule#MAX_LINES} (20 000): sobra para subir con la rueda por toda la sesion, y la memoria ya no
+     * crece sin limite en sesiones de muchas horas.
      */
     @ModifyConstant(method = "setChatLine", constant = @Constant(intValue = 100))
     private int atenas$historyLimit(int vanilla) {
         ChatModule m = ModuleManager.find(ChatModule.class);
-        return m != null && m.isEnabled() && m.keepsAllMessages() ? Integer.MAX_VALUE : vanilla;
+        return m != null && m.isEnabled() && m.keepsAllMessages() ? ChatModule.MAX_LINES : vanilla;
     }
 }
