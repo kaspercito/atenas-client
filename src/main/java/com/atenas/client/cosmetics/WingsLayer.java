@@ -70,7 +70,7 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         float zoff = cape ? 2.0f : 0f;
         mesh.outset = outset; mesh.zoff = zoff;
         membrane.outset = outset; membrane.zoff = zoff;
-        if (p.isSneaking()) open = (cape ? 0.9f : 1.15f) * item.openMul;
+        if (p.isSneaking()) open = (cape ? 0.5f : 0.6f) * item.openMul; // agachado: mas cerradas, pegadas al cuerpo
         float flap = 0.025f + 0.075f * a; // siempre ondulan un poco; mas en el aire
 
         GlStateManager.color(1f, 1f, 1f, 1f);
@@ -78,7 +78,7 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         GlStateManager.tryBlendFuncSeparate(770, 771, 1, 0);
         if (twoSided) GlStateManager.enableCull(); else GlStateManager.disableCull();
         GlStateManager.pushMatrix();
-        if (p.isSneaking()) GlStateManager.rotate(28.6f, 1f, 0f, 0f);
+        if (p.isSneaking()) { GlStateManager.translate(0f, 0.2f, 0f); GlStateManager.rotate(28.6f, 1f, 0f, 0f); } // ModelBiped baja el cuerpo 0.2 al agacharse
 
         Tessellator t = Tessellator.getInstance();
         WorldRenderer wr = t.getWorldRenderer();

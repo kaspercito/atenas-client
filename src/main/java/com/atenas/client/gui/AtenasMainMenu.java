@@ -25,7 +25,7 @@ import net.minecraft.client.gui.GuiSelectWorld;
  */
 public class AtenasMainMenu extends GuiScreen {
 
-    private static final int ID_SINGLE = 0, ID_MULTI = 1, ID_MODS = 2, ID_OPTIONS = 3, ID_CLOSE = 4, ID_FRIENDS = 5, ID_ACCOUNT = 6;
+    private static final int ID_SINGLE = 0, ID_MULTI = 1, ID_MODS = 2, ID_OPTIONS = 3, ID_CLOSE = 4, ID_FRIENDS = 5, ID_ACCOUNT = 6, ID_COSMETICS = 7;
     private static final int FOOTER = 46;        // franja inferior reservada en pantallas normales (version, atajo, cuenta)
     private static final int FOOTER_TIGHT = 26;  // y en ventanas bajitas (todo en una sola linea)
     private static final int TIGHT_BELOW = 300;  // alto (en pixeles de GUI) por debajo del cual se usa la franja chica
@@ -85,14 +85,15 @@ public class AtenasMainMenu extends GuiScreen {
         layout();
         int bx = width / 2 - bw / 2;
         int y2 = btnY + 3 * (bh + gap) - gap + 8;
-        int half = (bw - 6) / 2;
+        int half = (bw - 12) / 3;
         // Un solo idioma: el del juego (ver Lang). Los tres botones grandes llevan solo su nombre; los chicos, una pista corta.
         buttonList.add(new MenuButton(ID_SINGLE, bx, btnY, bw, bh, Lang.t("Un jugador", "Singleplayer"), null, false));
         buttonList.add(new MenuButton(ID_MULTI, bx, btnY + (bh + gap), bw, bh, Lang.t("Multijugador", "Multiplayer"), null, false));
         buttonList.add(new MenuButton(ID_OPTIONS, bx, btnY + 2 * (bh + gap), bw, bh, Lang.t("Opciones", "Options"), null, false));
         friendsBtn = new MenuButton(ID_FRIENDS, bx, y2, half, sh, Lang.t("Amigos", "Friends"), "Shift+Tab", true);
         buttonList.add(friendsBtn);
-        buttonList.add(new MenuButton(ID_ACCOUNT, bx + half + 6, y2, half, sh, Lang.t("Cuenta", "Account"), Lang.t("Cambiar", "Switch"), true));
+        buttonList.add(new MenuButton(ID_COSMETICS, bx + half + 6, y2, half, sh, Lang.t("Cosm\u00e9ticos", "Cosmetics"), null, true));
+        buttonList.add(new MenuButton(ID_ACCOUNT, bx + 2 * (half + 6), y2, bw - 2 * (half + 6), sh, Lang.t("Cuenta", "Account"), Lang.t("Cambiar", "Switch"), true));
         buttonList.add(new CloseButton(ID_CLOSE, width - 32, 10, 22));
         SocialClient.sync(false, "");
         if (!readyAnnounced) {
@@ -108,6 +109,7 @@ public class AtenasMainMenu extends GuiScreen {
             case ID_MULTI: mc.displayGuiScreen(new GuiMultiplayer(this)); break;
             case ID_OPTIONS: mc.displayGuiScreen(new GuiOptions(this, mc.gameSettings)); break;
             case ID_FRIENDS: mc.displayGuiScreen(new SocialScreen(this)); break;
+            case ID_COSMETICS: mc.displayGuiScreen(new CosmeticsScreen(this)); break;
             case ID_ACCOUNT: mc.displayGuiScreen(new AccountScreen(this)); break;
             case ID_CLOSE: mc.shutdown(); break;
             default: mc.displayGuiScreen(new AtenasMenu(this)); break;
