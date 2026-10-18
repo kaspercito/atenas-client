@@ -15,7 +15,10 @@ import javax.imageio.ImageIO;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.renderer.GlStateManager;
+import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.minecraft.MinecraftProfileTexture;
 import net.minecraft.client.resources.DefaultPlayerSkin;
+import net.minecraft.client.resources.SkinManager;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.util.ResourceLocation;
 
@@ -31,7 +34,44 @@ public final class Faces {
     /** Nicks cuya cara no se pudo bajar (no existe, sin conexion...): se dibujan como Steve. Lo escribe el hilo de descarga. */
     private static final Set<String> FAILED = Collections.synchronizedSet(new HashSet<String>());
 
+    private static volatile ResourceLocation ownSkin;
+    private static boolean ownAsked;
+
     private Faces() {}
+
+    /** Skin REAL de la cuenta con la que juegas (se pide una sola vez, en segundo plano). null mientras llega o si la cuenta no tiene. */
+    private static ResourceLocation ownSkin() {
+        if (ownSkin != null) return ownSkin;
+        if (!ownAsked) {
+            ownAsked = true;
+            final Minecraft mc = Minecraft.getMinecraft();
+            Thread t = new Thread(new Runnable() {
+                @Override public void run() {
+                    try {
+                        GameProfile gp = mc.getSession().getProfile();
+                        try { GameProfile full = mc.getSessionService().fillProfileProperties(gp, true); if (full != null) gp = full; } catch (Throwable ignored) { /* se prueba con el perfil tal cual */ }
+                        final GameProfile profile = gp;
+                        mc.addScheduledTask(new Runnable() {
+                            @Override public void run() {
+                                mc.getSkinManager().loadProfileTextures(profile, new SkinManager.SkinAvailableCallback() {
+                                    @Override public void skinAvailable(MinecraftProfileTexture.Type type, ResourceLocation loc, MinecraftProfileTexture tex) {
+                                        if (type == MinecraftProfileTexture.Type.SKIN) ownSkin = loc;
+                                    }
+                                }, false);
+                            }
+                        });
+                    } catch (Throwable ignored) { /* queda la cabeza de mc-heads o Steve */ }
+                }
+            }, "Atenas-OwnSkin");
+            t.setDaemon(true);
+            t.start();
+        }
+        return ownSkin;
+    }
+
+    private static boolean isSelf(String name) {
+        try { return name != null && name.equalsIgnoreCase(Minecraft.getMinecraft().getSession().getUsername()); } catch (Throwable t) { return false; }
+    }
 
     /** La textura de la cara, o null si todavia no llego (o no se pudo bajar). */
     public static ResourceLocation get(String name) {
@@ -112,6 +152,7 @@ public final class Faces {
     public static boolean draw(String name, int x, int y, int size, float alpha, boolean steve) {
         if (steve) { drawHead(ownDefaultSkin(), x, y, size, alpha); return true; } // cuenta sin conexion (la tuya): su skin por defecto real
         if (name == null || !SocialClient.validName(name)) { drawSteve(x, y, size, alpha); return true; }
+        if (isSelf(name)) { ResourceLocation own = ownSkin(); if (own != null) { drawHead(own, x, y, size, alpha); return true; } }
         ResourceLocation face = get(name);
         if (face != null) {
             Minecraft.getMinecraft().getTextureManager().bindTexture(face);

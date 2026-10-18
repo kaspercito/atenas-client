@@ -83,7 +83,7 @@ public final class AtenasSplash {
             frame();
             try { Thread.sleep(8); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); }
         }
-        frame();
+        for (int i = 0; i < 6; i++) { frame(); try { Thread.sleep(12); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); } }
     }
 
     // ------------------------------------------------------------------ dibujo
@@ -121,58 +121,116 @@ public final class AtenasSplash {
         Display.update();
     }
 
+    private static final String[] TIPS = {"Sincronizando tu identidad", "Cargando cosm\u00e9ticos y mascotas", "Conectando con Atenas", "Preparando tu men\u00fa"};
+
+    private static void bracket(float x, float y, float len, float dx, float dy, float th, int rgb, float al) {
+        rect(Math.min(x, x + dx * len), dy > 0 ? y : y - th, len, th, rgb, al);
+        rect(dx > 0 ? x : x - th, Math.min(y, y + dy * len), th, len, rgb, al);
+    }
+
     private static void draw(int w, int h) {
         final float u = Math.max(0.6f, Math.min(w / 960f, h / 540f)); // unidad de escala
         final float t = (System.currentTimeMillis() - t0) / 1000f;
+        final float th = Math.max(1f, u * 1.5f);
         GL11.glDisable(GL11.GL_TEXTURE_2D);
         GL11.glShadeModel(GL11.GL_SMOOTH);
 
-        // resplandor violeta del horizonte (abajo)
-        gradV(0, h * 0.62f, w, h * 0.38f, 0x008B5CF6, 0x558B5CF6);
+        // fondo en degradado y resplandor inferior
+        gradV(0, 0, w, h, 0xFF04030B, 0xFF120A2E);
+        gradV(0, h * 0.55f, w, h * 0.45f, 0x0022D3EE, 0x408B5CF6);
 
-        // estrellas
+        // rejilla en perspectiva que avanza hacia ti
+        final float horizon = h * 0.58f, flow = (t * 0.35f) % 1f;
+        for (int i = 0; i < 14; i++) {
+            float p = (i + flow) / 14f;
+            rect(0, horizon + (h - horizon) * p * p, w, Math.max(1f, u * 0.8f), 0x8B5CF6, 0.05f + 0.20f * p);
+        }
+        for (int i = -10; i <= 10; i++) {
+            float gx = w / 2f + i * (w / 16f);
+            GL11.glBegin(GL11.GL_LINES);
+            argb(0x1022D3EE); GL11.glVertex2f(w / 2f + (gx - w / 2f) * 0.15f, horizon);
+            argb(0x5522D3EE); GL11.glVertex2f(w / 2f + (gx - w / 2f) * 1.25f, h);
+            GL11.glEnd();
+        }
         for (int i = 0; i < starX.length; i++) {
-            float a = 0.25f + 0.55f * (0.5f + 0.5f * (float) Math.sin(t * 1.4f + starP[i]));
-            rect(starX[i] * w, starY[i] * h, starS[i] * u, starS[i] * u, 0xFFFFFF, a * 0.8f);
+            float al = 0.25f + 0.55f * (0.5f + 0.5f * (float) Math.sin(t * 1.4f + starP[i]));
+            rect(starX[i] * w, starY[i] * h * 0.75f, starS[i] * u, starS[i] * u, 0xFFFFFF, al * 0.7f);
         }
 
-        // marca: logo con pulso
+        // marco HUD
+        final float m = 26f * u, bl = 44f * u;
+        bracket(m, m, bl, 1, 1, th, 0x22D3EE, 0.85f);
+        bracket(w - m, m, bl, -1, 1, th, 0x22D3EE, 0.85f);
+        bracket(m, h - m, bl, 1, -1, th, 0x8B5CF6, 0.85f);
+        bracket(w - m, h - m, bl, -1, -1, th, 0x8B5CF6, 0.85f);
+
+        // logo con halo y anillos orbitales
         final float cx = w / 2f;
-        final float logo = 120f * u, ly = h * 0.5f - 170f * u;
-        float pulse = 0.5f + 0.5f * (float) Math.sin(t * 3f);
-        for (int k = 3; k >= 1; k--) {
-            float g = logo + k * 18f * u;
-            rect(cx - g / 2f, ly + logo / 2f - g / 2f, g, g, 0x8B5CF6, (0.03f + 0.04f * pulse) / k);
+        final float logo = 112f * u, ly = h * 0.5f - 178f * u, lcy = ly + logo / 2f;
+        float pulse = 0.5f + 0.5f * (float) Math.sin(t * 2.6f);
+        for (int k = 4; k >= 1; k--) {
+            float g = logo + k * 16f * u;
+            rect(cx - g / 2f, lcy - g / 2f, g, g, 0x8B5CF6, (0.025f + 0.035f * pulse) / k);
         }
         if (logoTex == 0) loadLogo();
-        if (logoTex != 0) {
+        if (logoTex > 0) {
             GL11.glEnable(GL11.GL_TEXTURE_2D);
             GL11.glBindTexture(GL11.GL_TEXTURE_2D, logoTex);
             GL11.glColor4f(1f, 1f, 1f, 1f);
             quadTex(cx - logo / 2f, ly, logo, logo);
             GL11.glDisable(GL11.GL_TEXTURE_2D);
         }
-
-        // titulo y subtitulo
-        float y = ly + logo + 16f * u;
-        y += text("ATENAS", 46f * u, 0xA78BFA, cx, y, true) + 2f * u;
-        y += text("C  L  I  E  N  T", 15f * u, 0x22D3EE, cx, y, true) + 10f * u;
-        rect(cx - 150f * u, y, 300f * u, Math.max(1f, u), 0x6D4FC7, 1f);
-        rect(cx - 22f * u, y - Math.max(1f, u), 44f * u, 3f * Math.max(1f, u), 0x8B5CF6, 1f);
-
-        // barra de carga
-        final float bw = 360f * u, bh = Math.max(5f, 7f * u), bx = cx - bw / 2f, by = h * 0.5f + 118f * u;
-        rect(bx - 2, by - 2, bw + 4, bh + 4, 0x2B2848, 1f);
-        rect(bx, by, bw, bh, 0x0B0E1C, 1f);
-        float fill = bw * Math.max(0f, Math.min(1f, shown));
-        if (fill > 0.5f) {
-            gradH(bx, by, fill, bh, 0xFF22D3EE, 0xFF8B5CF6, 0xFFEC4899, bw);
-            rect(bx + fill - 2f, by - 2f, 2f, bh + 4f, 0xFFFFFF, 0.9f); // punta brillante
+        for (int ring = 0; ring < 2; ring++) {
+            final int dots = ring == 0 ? 56 : 40;
+            final float r = logo * (ring == 0 ? 0.88f : 1.08f);
+            final float head = t * (ring == 0 ? 1.5f : -1.1f);
+            for (int i = 0; i < dots; i++) {
+                float ang = (float) (i * 6.2831853 / dots);
+                float d = ((head - ang) % 6.2831853f + 6.2831853f) % 6.2831853f;
+                float glow = (float) Math.exp(-d * 1.6f);
+                float x = cx + (float) Math.cos(ang) * r * 1.15f, y2 = lcy + (float) Math.sin(ang) * r * 0.62f;
+                float sz = u * (1.6f + glow * 3f);
+                rect(x - sz / 2f, y2 - sz / 2f, sz, sz, ring == 0 ? 0x22D3EE : 0xA78BFA, 0.18f + 0.82f * glow);
+            }
         }
 
+        // titulo y subtitulo
+        float y = ly + logo + 26f * u;
+        y += text("A T E N A S", 40f * u, 0xE9E3FF, cx, y, true) + 2f * u;
+        y += text("C  L  I  E  N  T   \u00b7   1 . 8 . 9", 14f * u, 0x22D3EE, cx, y, true) + 12f * u;
+
+        // barra segmentada futurista
+        final float bw = 480f * u, bh = Math.max(6f, 11f * u), bx = cx - bw / 2f, by = h * 0.5f + 104f * u;
+        final float prog = Math.max(0f, Math.min(1f, shown));
+        final int n = 48;
+        final int filled = Math.round(n * prog);
+        final float segW = bw / n;
+        rect(bx - 6f * u, by - 6f * u, bw + 12f * u, bh + 12f * u, 0x0B0E1C, 0.85f);
+        bracket(bx - 7f * u, by - 7f * u, 12f * u, 1, 1, th, 0x22D3EE, 1f);
+        bracket(bx + bw + 7f * u, by - 7f * u, 12f * u, -1, 1, th, 0x22D3EE, 1f);
+        bracket(bx - 7f * u, by + bh + 7f * u, 12f * u, 1, -1, th, 0x8B5CF6, 1f);
+        bracket(bx + bw + 7f * u, by + bh + 7f * u, 12f * u, -1, -1, th, 0x8B5CF6, 1f);
+        final float scan = (t * n * 0.9f) % (n + 8);
+        for (int i = 0; i < n; i++) {
+            float sxp = bx + i * segW, sw = Math.max(2f, segW - Math.max(1.5f, 2f * u));
+            if (i < filled) {
+                float pp = i / (float) n;
+                int c = pp < 0.5f ? mix(0x22D3EE, 0x8B5CF6, pp / 0.5f) : mix(0x8B5CF6, 0xEC4899, (pp - 0.5f) / 0.5f);
+                float sh = Math.max(0f, 1f - Math.abs(i - scan) / 3f);
+                rect(sxp, by, sw, bh, mix(c, 0xFFFFFF, sh * 0.7f), 1f);
+                rect(sxp, by + bh, sw, 3f * u, c, 0.18f);
+            } else {
+                rect(sxp, by, sw, bh, 0x1B1A33, 1f);
+            }
+        }
+        if (filled < n) rect(bx + filled * segW, by, Math.max(2f, segW - 2f * u), bh, 0xFFFFFF, 0.35f + 0.5f * pulse);
+        gradV(bx, by - 10f * u, bw * prog, 10f * u, 0x008B5CF6, 0x298B5CF6);
+
         // estado y porcentaje
-        text(status, 14f * u, 0x9B97B8, cx - 30f * u, by + bh + 14f * u, false);
-        text(Math.round(Math.max(0f, Math.min(1f, shown)) * 100f) + "%", 14f * u, 0xF1EEFC, cx + bw / 2f - 18f * u, by + bh + 14f * u, false);
+        String tip = prog >= 0.97f ? "Abriendo el men\u00fa" : (status != null && status.length() > 0 ? status : TIPS[(int) (t / 2.2f) % TIPS.length]);
+        text(tip + "...".substring(0, 1 + (int) (t * 2.5f) % 3), 14f * u, 0x9B97B8, bx + 90f * u, by + bh + 16f * u, false);
+        text(Math.round(prog * 100f) + "%", 24f * u, 0xF1EEFC, bx + bw - 26f * u, by + bh + 10f * u, true);
+        text("ATENAS  \u00b7  iniciando", 11f * u, 0x6D6A8F, cx, h - m - 14f * u, false);
     }
 
     // ------------------------------------------------------------------ piezas
