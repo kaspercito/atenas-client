@@ -16,7 +16,7 @@ import net.minecraft.client.renderer.vertex.DefaultVertexFormats;
 public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
     private final RenderPlayer renderer;
     private final WingMesh mesh = new WingMesh();
-    private final MembraneWing membrane = new MembraneWing();
+    private final WingPlane plane = new WingPlane();
     private final TessSink sink = new TessSink();
 
     /** Estado propio por jugador: la fase del aleteo avanza SIEMPRE y la mezcla suelo/aire es gradual (antes saltaba y se "reseteaba"). */
@@ -65,6 +65,15 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         float openGround = 0.85f + (float) Math.sin(st.phase * 0.2f) * 0.07f + (float) Math.sin(st.phase * 0.47f) * 0.025f - st.spd * 0.22f; // respiran y se recogen al correr
         float openAir = 0.50f + (float) Math.sin(st.phase * 0.55f) * 0.32f - st.vy * 0.18f; // al caer se abren mas
         float open = openGround * (1f - a) + openAir * a;
+        // al caminar/correr las alas acompanan cada paso (antes casi no se notaba); en el aire el aleteo ya manda
+        open += (float) Math.sin(limbSwing * 1.2f) * limbSwingAmount * 0.26f * (1f - a);
+        WingPlane.Style ws = item.membrane ? WingPlane.styleOf(item.modelId()) : null;
+        float time = st.phase;
+        if (ws != null) { // personalidad del ala: latido en reposo (abre y cierra), velocidad propia
+            time = st.phase * ws.speed;
+            open += ws.idle * (float) Math.sin(st.phase * ws.idleFreq) * (1f - 0.7f * a);
+            open *= ws.open;
+        }
         // Con capa: las alas nacen justo detras de la capa (zoff) y casi pegadas al centro (outset): no la tapan ni quedan separadas.
         boolean cape = Cosmetics.of(p, Cosmetics.Type.CAPE) != null;
         if (cape) open *= 0.80f;
@@ -72,9 +81,10 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         float outset = cape ? 1.2f : 0f; // casi pegadas a la columna: nacen detras de la capa, no separadas
         float zoff = cape ? 1.8f : 0f; // sin capa: como antes; con capa: justo detras de ella
         mesh.outset = outset; mesh.zoff = zoff;
-        membrane.outset = outset; membrane.zoff = zoff;
+        plane.outset = outset; plane.zoff = zoff;
         if (p.isSneaking()) open = (cape ? 0.9f : 1.15f) * item.openMul;
-        float flap = 0.025f + 0.075f * a + 0.04f * st.spd; // siempre ondulan un poco; mas en el aire
+        float flap = 0.03f + 0.075f * a + 0.11f * st.spd + Math.abs(limbSwingAmount) * 0.03f; // siempre ondulan un poco; mas al andar y en el aire
+        if (ws != null) flap *= ws.amp;
 
         GlStateManager.color(1f, 1f, 1f, 1f);
         GlStateManager.enableBlend();
@@ -87,7 +97,7 @@ public class WingsLayer implements LayerRenderer<AbstractClientPlayer> {
         WorldRenderer wr = t.getWorldRenderer();
         wr.begin(7, DefaultVertexFormats.POSITION_TEX_NORMAL); // 7 = GL_QUADS
         sink.wr = wr;
-        if (item.membrane) membrane.emit(sink, open, st.phase, flap, twoSided, 0.0625f);
+        if (item.membrane) plane.emit(sink, open, time, flap, twoSided, WingPlane.gridFor(d2), 0.0625f);
         else mesh.emit(sink, open, st.phase, flap, segs, twoSided, 0.0625f);
         sink.wr = null;
         t.draw();

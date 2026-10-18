@@ -32,7 +32,7 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
         // Pegada a la espalda (la de Mojang va a 0.125; esta a 0.135 para taparla sin separarse del cuerpo). Con alas puestas NO se
         // aleja: las alas son las que nacen detras de la capa (ver WingsLayer / WingMesh.zoff).
         if (p.isSneaking()) GlStateManager.translate(0f, 0.142f, -0.0178f); // igual que la capa de Mojang
-        GlStateManager.translate(0f, 0f, 0.15f); // un poco mas separada para que no se meta al cuerpo
+        GlStateManager.translate(0f, 0f, 0.14f); // pegada a la espalda (Mojang 0.125; 0.14 solo libra la capa jacket del skin)
 
         double dx = p.prevChasingPosX + (p.chasingPosX - p.prevChasingPosX) * (double) pt
                 - (p.prevPosX + (p.posX - p.prevPosX) * (double) pt);
@@ -51,11 +51,12 @@ public class CapeLayer implements LayerRenderer<AbstractClientPlayer> {
         lift += MathHelper.sin((p.prevDistanceWalkedModified
                 + (p.distanceWalkedModified - p.prevDistanceWalkedModified) * pt) * 6f) * 32f * cam;
         if (p.isSneaking()) lift += 25f;
+        if (Cosmetics.inPreview) { swing = 0f; sway = 0f; lift = 0f; } // vista previa: la capa cuelga quieta
 
         // La inclinacion total es la de siempre, pero solo 35 % la gira el cuerpo entero: el resto lo doblan las tiras de tela.
         float tilt = swing / 2f + lift;
         float bend = (float) Math.toRadians(tilt * 0.65f);
-        float turn = MathHelper.clamp_float((p.renderYawOffset - p.prevRenderYawOffset) * 0.012f, -0.3f, 0.3f); // la tela se balancea al girar
+        float turn = Cosmetics.inPreview ? 0f : MathHelper.clamp_float((p.renderYawOffset - p.prevRenderYawOffset) * 0.012f, -0.3f, 0.3f); // la tela se balancea al girar
         float amp = CapeWave.ampFor(swing); // quieta: respiro leve; corriendo: ondea fuerte
         GlStateManager.rotate(Math.max(8f, 6f + tilt * 0.35f) + (p.isSneaking() ? 6f : 0f), 1f, 0f, 0f); // agachado: mas atras para librar la cadera
         GlStateManager.rotate(sway / 4f, 0f, 0f, 1f);

@@ -5,6 +5,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import net.minecraft.block.Block;
+import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.AbstractClientPlayer;
@@ -32,9 +33,11 @@ public class PetRender {
         final PetBrain brain;
         Cosmetics.Item item;
         boolean seen;
+        String kind = "";
         Pet(long seed) { brain = new PetBrain(seed); }
     }
 
+    private final PetBrain.Owner owner = new PetBrain.Owner();
     private final Map<String, Pet> pets = new HashMap<String, Pet>();
     private final Map<String, PetModel> models = new HashMap<String, PetModel>();
 
@@ -54,13 +57,35 @@ public class PetRender {
             }
             return Double.NaN;
         }
+
+        @Override public double water(double x, double z, double y) {
+            World w = Minecraft.getMinecraft().theWorld;
+            if (w == null) return Double.NaN;
+            int bx = MathHelper.floor_double(x), bz = MathHelper.floor_double(z), by = MathHelper.floor_double(y);
+            for (int dy = 0; dy >= -1; dy--) {
+                int yy = by + dy;
+                if (w.getBlockState(new BlockPos(bx, yy, bz)).getBlock().getMaterial() != Material.water) continue;
+                for (int n = 0; n < 8; n++) {
+                    if (w.getBlockState(new BlockPos(bx, yy + 1, bz)).getBlock().getMaterial() == Material.water) yy++; else break;
+                }
+                return yy + 0.89;
+            }
+            return Double.NaN;
+        }
     };
+
+    /** Misma condicion que usa Minecraft 1.8.9 para pausar (no hay metodo publico): mundo local + pantalla que pausa + sin abrir a LAN. En un servidor nunca se pausa. */
+    private static boolean isPaused(Minecraft mc) {
+        return mc.isSingleplayer() && mc.currentScreen != null && mc.currentScreen.doesGuiPauseGame()
+                && mc.getIntegratedServer() != null && !mc.getIntegratedServer().getPublic();
+    }
 
     @SubscribeEvent
     public void onTick(TickEvent.ClientTickEvent e) {
         if (e.phase != TickEvent.Phase.END) return;
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.theWorld == null || mc.thePlayer == null) { pets.clear(); return; }
+        if (isPaused(mc)) return;   // un solo jugador con el menu de pausa abierto: el mundo esta congelado, la mascota tambien
         for (Pet p : pets.values()) p.seen = false;
         for (EntityPlayer ep : mc.theWorld.playerEntities) {
             if (!(ep instanceof AbstractClientPlayer)) continue;
@@ -74,9 +99,17 @@ public class PetRender {
                 pet = new Pet(name.hashCode());
                 pets.put(name, pet);
             }
+            PetSpec.Kind kd = PetSpec.kindFor(item.modelId());
+            if (kd == null) continue;
+            if (!kd.name.equals(pet.kind)) { pet.kind = kd.name; pet.brain.configure(kd.flier, kd.avoidWater, kd.hop); }
             pet.seen = true;
             pet.item = item;
-            pet.brain.tick(p.posX, p.posY, p.posZ, p.rotationYaw, p.isSneaking(), GROUND);
+            owner.x = p.posX; owner.y = p.posY; owner.z = p.posZ;
+            owner.yaw = p.rotationYaw; owner.bodyYaw = p.renderYawOffset; owner.pitch = p.rotationPitch;
+            owner.sneaking = p.isSneaking(); owner.sprinting = p.isSprinting();
+            owner.fallFlying = false; owner.flying = p.capabilities.isFlying; owner.swimming = false;
+            owner.inWater = p.isInWater(); owner.riding = p.isRiding(); owner.climbing = p.isOnLadder(); owner.onGround = p.onGround;
+            pet.brain.tick(owner, GROUND);
         }
         // quien ya no esta (se fue, se quito la mascota o se alejo) pierde su mascota; al volver aparece junto a el
         for (Iterator<Pet> it = pets.values().iterator(); it.hasNext();) if (!it.next().seen) it.remove();
@@ -103,17 +136,25 @@ public class PetRender {
             OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, light & 65535, light >> 16);
             GlStateManager.color(1f, 1f, 1f, 1f);
 
-            String kind = PetSpec.kindFor(pet.item.modelId()).name;
-            PetModel model = models.get(kind);
-            if (model == null) {
-                model = new PetModel(PetSpec.kindFor(pet.item.modelId()));
-                models.put(kind, model);
-            }
+            PetSpec.Kind kd = PetSpec.kindFor(pet.item.modelId());
+            if (kd == null) continue;
+            PetModel model = models.get(kd.name);
+            if (model == null) { model = new PetModel(kd); models.put(kd.name, model); }
+            float sc = PetSpec.renderScale(kd, b, pt);
+            TexFilter.prepare(pet.item.texture, -1);
             mc.getTextureManager().bindTexture(pet.item.texture);
             GlStateManager.pushMatrix();
             GlStateManager.translate(x - rm.viewerPosX, y - rm.viewerPosY, z - rm.viewerPosZ);
             GlStateManager.rotate(180f - b.iyaw(pt), 0f, 1f, 0f);
-            GlStateManager.scale(-PetSpec.SCALE, -PetSpec.SCALE, PetSpec.SCALE);
+            float pitch = b.ipitch(pt), roll = b.iroll(pt);
+            if (Math.abs(pitch) > 0.001f || Math.abs(roll) > 0.001f) {   // inclinada en el aire
+                float cy = (kd.legH + kd.bodyH / 2f) / 16f * sc;
+                GlStateManager.translate(0f, cy, 0f);
+                GlStateManager.rotate((float) Math.toDegrees(roll), 0f, 0f, 1f);
+                GlStateManager.rotate((float) -Math.toDegrees(pitch), 1f, 0f, 0f);
+                GlStateManager.translate(0f, -cy, 0f);
+            }
+            GlStateManager.scale(-sc, -sc, sc);
             GlStateManager.translate(0f, -1.501f, 0f); // en el modelo los pies estan en y = 24 (1.5 bloques)
             model.render(b, pt, 0.0625f);
             GlStateManager.popMatrix();
@@ -141,8 +182,11 @@ public class PetRender {
     public static void renderPreview(Cosmetics.Item item) {
         if (item == null) return;
         Minecraft mc = Minecraft.getMinecraft();
+        PetSpec.Kind kd = PetSpec.kindFor(item.modelId());
+        if (kd == null) return;
         if (previewBrain == null || !previewKey.equals(item.id)) {
             previewBrain = new PetBrain(item.id.hashCode());
+            previewBrain.configure(kd.flier, kd.avoidWater, kd.hop);
             previewBrain.teleport(0.0, 0.0, 0.0, 0f);
             previewKey = item.id;
             previewLast = System.currentTimeMillis();
@@ -153,16 +197,17 @@ public class PetRender {
         for (int i = 0; i < ticks; i++) previewBrain.tick(0.0, 0.0, 0.0, 0f, false, FLAT);
         float pt = Math.min(1f, (now - previewLast) / 50f);
 
-        String kind = PetSpec.kindFor(item.modelId()).name;
-        PetModel model = PREVIEW_MODELS.get(kind);
-        if (model == null) { model = new PetModel(PetSpec.kindFor(item.modelId())); PREVIEW_MODELS.put(kind, model); }
+        PetModel model = PREVIEW_MODELS.get(kd.name);
+        if (model == null) { model = new PetModel(kd); PREVIEW_MODELS.put(kd.name, model); }
+        float sc = PetSpec.renderScale(kd, previewBrain, pt);
+        TexFilter.prepare(item.texture, -1);
         mc.getTextureManager().bindTexture(item.texture);
         GlStateManager.color(1f, 1f, 1f, 1f);
         GlStateManager.enableBlend();
         GlStateManager.pushMatrix();
-        GlStateManager.translate(0.95f, 0f, 0f);       // a un lado del jugador
+        GlStateManager.translate(0.95f, kd.flier ? 0.55f + (float) Math.sin(now * 0.004) * 0.06f : 0f, 0f);   // a un lado del jugador
         GlStateManager.rotate(180f, 0f, 1f, 0f);       // mirando a la camara
-        GlStateManager.scale(-PetSpec.SCALE, -PetSpec.SCALE, PetSpec.SCALE);
+        GlStateManager.scale(-sc, -sc, sc);
         GlStateManager.translate(0f, -1.501f, 0f);
         model.render(previewBrain, pt, 0.0625f);
         GlStateManager.popMatrix();

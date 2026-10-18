@@ -696,6 +696,7 @@ public class AtenasMenu extends GuiScreen {
         RenderManager rm = mc.getRenderManager();
         rm.setPlayerViewY(180f);
         rm.setRenderShadow(false);
+        Cosmetics.inPreview = true;
         try {
             rm.renderEntityWithPosYaw(ent, 0.0, 0.0, 0.0, 0f, 1f);
         } catch (RuntimeException ex) {
@@ -703,6 +704,7 @@ public class AtenasMenu extends GuiScreen {
             if (ent != mc.thePlayer && ++mannequinFails > 30) mannequin = null;
         }
         rm.setRenderShadow(true);
+        Cosmetics.inPreview = false;
         ent.renderYawOffset = rYawOff;
         ent.prevRenderYawOffset = rPrevOff;
         ent.rotationYaw = rYaw;
