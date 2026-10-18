@@ -5,6 +5,8 @@ import java.io.IOException;
 import org.lwjgl.input.Keyboard;
 
 import com.atenas.client.AtenasClient;
+import com.atenas.client.FeaturedServer;
+import com.atenas.client.PackInfo;
 import com.atenas.client.account.Accounts;
 import com.atenas.client.core.Lang;
 import com.atenas.client.social.Faces;
@@ -17,6 +19,8 @@ import net.minecraft.client.gui.GuiMultiplayer;
 import net.minecraft.client.gui.GuiOptions;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.gui.GuiSelectWorld;
+import net.minecraft.client.multiplayer.GuiConnecting;
+import net.minecraft.client.multiplayer.ServerData;
 
 /**
  * Menu principal de Atenas (violeta sobre azul noche): Un jugador, Multijugador, Opciones, Amigos, Cuenta y una X para cerrar. Un solo idioma, el del juego.
@@ -24,7 +28,7 @@ import net.minecraft.client.gui.GuiSelectWorld;
  */
 public class AtenasMainMenu extends GuiScreen {
 
-    private static final int ID_SINGLE = 0, ID_MULTI = 1, ID_MODS = 2, ID_OPTIONS = 3, ID_CLOSE = 4, ID_FRIENDS = 5, ID_ACCOUNT = 6;
+    private static final int ID_SINGLE = 0, ID_MULTI = 1, ID_MODS = 2, ID_OPTIONS = 3, ID_CLOSE = 4, ID_FRIENDS = 5, ID_ACCOUNT = 6, ID_JOIN = 7;
     private static final int FOOTER = 46;        // franja inferior reservada en pantallas normales (version, atajo, cuenta)
     private static final int FOOTER_TIGHT = 26;  // y en ventanas bajitas (todo en una sola linea)
     private static final int TIGHT_BELOW = 300;  // alto (en pixeles de GUI) por debajo del cual se usa la franja chica
@@ -70,7 +74,7 @@ public class AtenasMainMenu extends GuiScreen {
             gap = (int) t[5];
             sh = bh - (int) t[6];
             bw = 250;
-            int btnsH = 3 * bh + 2 * gap + 8 + sh;
+            int btnsH = 4 * bh + 3 * gap + 8 + sh;
             total = brandH + sep + btnsH;
             if (total <= avail || tier == TIERS.length - 1) break;
         }
@@ -83,12 +87,13 @@ public class AtenasMainMenu extends GuiScreen {
         buttonList.clear();
         layout();
         int bx = width / 2 - bw / 2;
-        int y2 = btnY + 3 * (bh + gap) - gap + 8;
+        int y2 = btnY + 4 * (bh + gap) - gap + 8;
         int half = (bw - 6) / 2;
         // Un solo idioma: el del juego (ver Lang). Los tres botones grandes llevan solo su nombre; los chicos, una pista corta.
         buttonList.add(new MenuButton(ID_SINGLE, bx, btnY, bw, bh, Lang.t("Un jugador", "Singleplayer"), null, false));
         buttonList.add(new MenuButton(ID_MULTI, bx, btnY + (bh + gap), bw, bh, Lang.t("Multijugador", "Multiplayer"), null, false));
-        buttonList.add(new MenuButton(ID_OPTIONS, bx, btnY + 2 * (bh + gap), bw, bh, Lang.t("Opciones", "Options"), null, false));
+        buttonList.add(new MenuButton(ID_JOIN, bx, btnY + 2 * (bh + gap), bw, bh, Lang.t("Entrar a ", "Join ") + FeaturedServer.name(), FeaturedServer.ip(), false));
+        buttonList.add(new MenuButton(ID_OPTIONS, bx, btnY + 3 * (bh + gap), bw, bh, Lang.t("Opciones", "Options"), null, false));
         friendsBtn = new MenuButton(ID_FRIENDS, bx, y2, half, sh, Lang.t("Amigos", "Friends"), "Shift+Tab", true);
         buttonList.add(friendsBtn);
         buttonList.add(new MenuButton(ID_ACCOUNT, bx + half + 6, y2, half, sh, Lang.t("Cuenta", "Account"), Lang.t("Cambiar", "Switch"), true));
@@ -105,6 +110,7 @@ public class AtenasMainMenu extends GuiScreen {
         switch (b.id) {
             case ID_SINGLE: mc.displayGuiScreen(new GuiSelectWorld(this)); break;
             case ID_MULTI: mc.displayGuiScreen(new GuiMultiplayer(this)); break;
+            case ID_JOIN: mc.displayGuiScreen(new GuiConnecting(this, mc, new ServerData(FeaturedServer.title(), FeaturedServer.ip(), false))); break;
             case ID_OPTIONS: mc.displayGuiScreen(new GuiOptions(this, mc.gameSettings)); break;
             case ID_FRIENDS: mc.displayGuiScreen(new SocialScreen(this)); break;
             case ID_ACCOUNT: mc.displayGuiScreen(new AccountScreen(this)); break;
@@ -172,14 +178,17 @@ public class AtenasMainMenu extends GuiScreen {
         // pie: version (izquierda), atajo (centro), cuenta (derecha). Cada pieza se dibuja solo si cabe sin pisar a la otra.
         int fy = tight ? height - 20 : height - 22;
         int leftX = 18;
-        String ver = "Atenas Client " + AtenasClient.VERSION + "  \u00b7  Minecraft 1.8.9";
+        // izquierda: icono + nombre del pack (igual que el mod de 1.20.1); la version va despues si cabe
         int chipLeft = drawAccountChip(mx, my);
-        int verEnd = leftX + Draw.width(ver);
-        if (verEnd + 8 <= chipLeft) Draw.text(ver, leftX, fy, Theme.DIM);
-        else {
-            String shortVer = "Atenas Client " + AtenasClient.VERSION;
-            if (leftX + Draw.width(shortVer) + 8 <= chipLeft) { Draw.text(shortVer, leftX, fy, Theme.DIM); verEnd = leftX + Draw.width(shortVer); }
-            else verEnd = leftX;
+        PackInfo.drawIcon(leftX, fy - 1, PackInfo.kind());
+        String pack = PackInfo.packName();
+        int packX = leftX + 14;
+        int verEnd = leftX;
+        if (packX + Draw.width(pack) + 8 <= chipLeft) {
+            Draw.text(pack, packX, fy, Theme.DIM);
+            verEnd = packX + Draw.width(pack);
+            String ver = "  \u00b7  Atenas Client " + AtenasClient.VERSION;
+            if (verEnd + Draw.width(ver) + 8 <= chipLeft) { Draw.text(ver, verEnd, fy, Theme.DIM); verEnd += Draw.width(ver); }
         }
         String fr = SocialEvents.badgeLabel(Lang.t("Shift+Tab  \u00b7  Amigos y chat", "Shift+Tab  \u00b7  Friends and chat"));
         int frW = Draw.width(fr), frX = width / 2 - frW / 2;

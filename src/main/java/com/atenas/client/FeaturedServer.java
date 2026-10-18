@@ -27,6 +27,12 @@ public final class FeaturedServer {
         return v.isEmpty() ? DEFAULT_IP : v;
     }
 
+    /** Nombre del servidor sin la estrella (para el boton "Entrar a ..." del menu principal). */
+    public static String name() {
+        String n = prop("atenas.servername");
+        return n.isEmpty() ? DEFAULT_NAME : n;
+    }
+
     public static String title() {
         String n = prop("atenas.servername");
         return STAR + (n.isEmpty() ? DEFAULT_NAME : n);
