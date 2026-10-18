@@ -211,8 +211,6 @@ public class CosmeticsScreen extends GuiScreen {
         ent.rotationYawHead = spin;
         ent.prevRotationYawHead = spin;
         GlStateManager.translate(0f, 0f, 0f);
-        GlStateManager.enableLighting();
-        OpenGlHelper.setLightmapTextureCoords(OpenGlHelper.lightmapTexUnit, 240f, 240f); // brillo completo: no se ve oscuro
         RenderManager rm = mc.getRenderManager();
         rm.setPlayerViewY(180f);
         rm.setRenderShadow(false);
@@ -220,7 +218,7 @@ public class CosmeticsScreen extends GuiScreen {
             rm.renderEntityWithPosYaw(ent, 0.0, 0.0, 0.0, 0f, 1f);
         } catch (RuntimeException ex) {
             // sin mundo, el nombre del maniqui puede fallar al final del dibujo (el cuerpo ya se dibujo): no es un error
-            // no se descarta el maniqui: asi la vista previa no desaparece a los pocos cuadros
+            if (ent != mc.thePlayer && ++mannequinFails > 30) mannequin = null;
         }
         rm.setRenderShadow(true);
         ent.renderYawOffset = rYawOff;
